@@ -1,0 +1,55 @@
+{
+    "name": "rnn_test",
+    "cuda": false,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_dir": null,
+        "shuffle": true,
+        "data_set_name": "SpacingDataset",
+        "batch_size": 4,
+        "num_workers": 1
+    },
+    "validation": {
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.00001,
+        "weight_decay": 0
+    },
+    "loss": {
+        "spacing": "CrossEntropyLoss1D"
+    },
+    "loss_weights": {
+        "spacing": 1
+    },
+    "loss_params": 
+        {
+            "spacing":{"blank_weight":"max"}
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "SpacingTrainer",
+        "iterations": 20000,
+        "save_dir": "../saved/",
+        "val_step": 50,
+        "save_step": 5000,
+        "save_step_minor": 200,
+        "log_step": 10,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+
+
+        "use_learning_schedule": false
+    },
+    "arch": "Spacer", 
+    "model": {
+    }
+}

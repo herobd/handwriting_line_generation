@@ -1,0 +1,73 @@
+{
+    "name": "Phase1_frozen_featuresS1Dws_LRTEST",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "HWDataset",
+
+        "data_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",
+        "Xdata_dir": "../data/IAM/",
+        "batch_size": 4,
+        "shuffle": true,
+        "num_workers": 4,
+
+        "img_height": 64,
+        "char_file": "./data/IAM_char_set.json",
+        "center_pad": false
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 16
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.001,
+        "weight_decay": 0
+    },
+    "loss": {
+        "recog": "CTCLoss",
+        "auto": "pyramidL1Loss",
+        "feature": "DTWLoss"
+    },
+    "loss_weights": {
+        "auto": 1,
+        "feature": 0.00001,
+        "reconRecog": 0.02
+    },
+    "loss_params": 
+        {
+            "auto": {"weights":[0.2,0.2,0.2,0.2,0.2],
+                     "pool": "avg"},
+            "feature": {"downsize":2}
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 10000,
+        "save_dir": "../saved/",
+        "val_step": 500,
+        "save_step": 5000,
+        "save_step_minor": 250,
+        "log_step": 20,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+
+
+        "use_learning_schedule": "LR_test"
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 80,
+        "generator": "Shallow1DWithStyleBig",
+        "pretrained_hwr": "../checkpoint-iteration40000.pth.tar",
+        "hwr_frozen": true
+    }
+}

@@ -1,0 +1,98 @@
+{
+    "name": "CompileCountAndMask",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "AuthorHWDataset",
+
+        "data_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",
+        "Xdata_dir": "../data/IAM/",
+        "batch_size": 1,
+        "a_batch_size": 4,
+        "shuffle": true,
+        "num_workers": 2,
+
+        "img_height": 64,
+        "char_file": "./data/IAM_char_set.json",
+        "mask_post": ["thresh","dilate","errode"],
+        "mask_random": true
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 3,
+        "a_batch_size": 4
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.00001,
+        "weight_decay": 0,
+        "betas": [0.5,0.99]
+    },
+    "Xoptimizer_type_discriminator": "Adam",
+    "Xoptimizer_discriminator": {
+        "lr": 0.00001,
+        "weight_decay": 0,
+        "betas": [0,0.9]
+    },
+    "loss": {
+        "mask": "MSELoss"
+    },
+    "loss_weights": {
+        "mask": 0.0000001
+    },
+    "loss_params": 
+        {
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 150000,
+        "save_dir": "../saved/",
+        "val_step": 500,
+        "save_step": 5000,
+        "save_step_minor": 250,
+        "log_step": 50,
+        "curriculum": {"0": [["mask","gt_spaced"]]},
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "space_input": true,
+        "style_together": true,
+        "use_hwr_pred_for_style": true,
+        "hwr_without_style":true,
+        "slow_param_names": ["keys"],
+
+
+        "use_learning_schedule": false
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 80,
+        "generator": "SpacedWithMask",
+        "gen_dim": 128,
+        "gen_n_res1": 2,
+        "gen_n_res2": 3,
+        "gen_n_res3": 2,
+        "pretrained_generator": "../saved/Phase1_IAM_spacedS1DmaskRandDeeper_newStylePredBigGlobalKL1closer_GAN2lDless/checkpoint-iteration150000.pth",
+        "pretrained_hwr": "../checkpoint-iteration40000.pth.tar",
+        "hwr_frozen": true,
+        "style": "new",
+        "style_norm":"group",
+        "style_activ":"relu",
+        "style_dim": 512,
+        "num_keys": 64,
+        "global_pool": true,
+        "pretrained_style": "../saved/Phase1_IAM_spacedS1DmaskRandDeeper_newStylePredBigGlobalKL1closer_GAN2lDless/checkpoint-iteration150000.pth",
+        "create_mask": true,
+        "pretrained_create_mask": "../saved/MaskOnly_IAM_spacedS1DmaskRandDeeper_newStylePredBigGlobalKL1closer_GAN2lDless/checkpoint-latest.pth",
+        "spacer": true,
+        "pretrained_spacer": "../saved/CountOnly_IAM_spacedS1DmaskRandDeeper_newStylePredBigGlobalKL1closer_GAN2lDless/checkpoint-latest.pth"
+    }
+}

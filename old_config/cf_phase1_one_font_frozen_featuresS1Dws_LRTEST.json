@@ -1,0 +1,73 @@
+{
+    "name": "Phase1_one_font_frozen_featuresS1Dws_LRTEST",
+    "cuda": false,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "FontDataset",
+
+        "data_dir": "data",
+        "batch_size": 8,
+        "shuffle": true,
+        "num_workers": 5,
+
+        "img_height": 64,
+        "fontfile": "one_font.txt",
+        "char_file": "data/lotr_char_set.json",
+        "center_pad": false
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 16
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 1,
+        "weight_decay": 0
+    },
+    "loss": {
+        "recog": "CTCLoss",
+        "auto": "pyramidL1Loss",
+        "feature": "DTWLoss"
+    },
+    "loss_weights": {
+        "auto": 1,
+        "feature": 0.01,
+        "reconRecog": 0.02
+    },
+    "loss_params": 
+        {
+            "auto": {"weights":[0.2,0.2,0.2,0.2,0.2],
+                     "pool": "avg"},
+            "feature": {"downsize":2}
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 20000,
+        "save_dir": "../saved/",
+        "val_step": 500,
+        "save_step": 5000,
+        "save_step_minor": 250,
+        "log_step": 2,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+
+
+        "use_learning_schedule": "LR_test"
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 78,
+        "generator": "Shallow1DWithStyleBig",
+        "pretrained_hwr": "../saved/Phase1/checkpoint-iteration40000.pth.tar",
+        "hwr_frozen": true
+    }
+}

@@ -1,0 +1,79 @@
+{
+    "name": "Phase1_IAM_rnnSpacing_only",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "AuthorHWDataset",
+
+        "data_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",
+        "Xdata_dir": "../data/IAM/",
+        "batch_size": 2,
+        "a_batch_size": 4,
+        "shuffle": true,
+        "num_workers": 2,
+
+        "img_height": 64,
+        "char_file": "./data/IAM_char_set.json",
+        "center_pad": false
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 4,
+        "a_batch_size": 4
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.000001,
+        "weight_decay": 0
+    },
+    "loss": {
+        "spacing": "CrossEntropyLoss1D",
+        "spacingCTC": "CTCLoss"
+    },
+    "loss_weights": {
+        "spacing": 0.01,
+        "spacingCTC": 0.01
+    },
+    "loss_params": 
+        {
+            "spacing":{"blank_weight":"max"}
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 150000,
+        "save_dir": "../saved/",
+        "val_step": 500,
+        "save_step": 5000,
+        "save_step_minor": 250,
+        "log_step": 50,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+
+
+        "use_learning_schedule": false
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 78,
+        "generator": "RNNSpace",
+        "pretrained_hwr": "../checkpoint-iteration40000.pth.tar",
+        "hwr_frozen": true,
+        "style": "new",
+        "style_norm":"group",
+        "style_activ":"relu",
+        "style_dim": 512,
+        "num_keys": 64,
+        "global_pool": true,
+        "pretrained_style": "../KLmore_style.pth",
+        "style_frozen": true
+    }
+}
