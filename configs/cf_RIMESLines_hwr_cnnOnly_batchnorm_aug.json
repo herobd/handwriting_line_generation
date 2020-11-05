@@ -44,7 +44,7 @@
     "metrics": [],
     "trainer": {
         "class": "HWWithStyleTrainer",
-        "iterations": 500000,
+        "iterations": 425000,
         "save_dir": "../saved/",
         "val_step": 12500,
         "save_step": 25000,

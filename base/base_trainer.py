@@ -1,3 +1,4 @@
+#from https://github.com/victoresque/pytorch-template, with heavy modifications
 import os
 import math
 import json, copy

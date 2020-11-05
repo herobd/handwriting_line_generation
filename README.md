@@ -4,7 +4,9 @@ Handwriting... with style!
 
 This is the code for the paper "Text and Style Conditioned GAN for the Generation of Offline-Handwriting Lines" published at BMVC 2020. https://arxiv.org/abs/2009.00678
 
-This was originally Brian Davis's summer 2019 internship project at Adobe.
+This was originally Brian Davis's summer 2019 internship project at Adobe (https://github.com/adobe-research/hw_with_style). It was then extended afterwards (while at BYU) and finally published.
+
+The trained models (snapshots) will be available as a file in the release.
 
 Code structure based on victoresque pytorch template.
 
@@ -29,7 +31,8 @@ Encoder: `python train.py -c configs/cf_IAM_auto_2tight_newCTC.json`
 
 Then the generator can be trained: `python train.py -c configs/cf_IAMslant_noMask_charSpecSingleAppend_GANMedMT_autoAEMoPrcp2tightNewCTCUseGen_balB_hCF0.75_sMG.json`
 
-RIMES will use
+
+The RIMES dataset will use:
 
 HWR: `python train.py -c configs/cf_RIMESLines_hwr_cnnOnly_batchnorm_aug.json`
 
@@ -79,7 +82,10 @@ Some modes need the datasets styles in a pickle. Use `get_styles.py` to extract 
   │   ├── author_hw_dataset.py - This sorts instances by author and has a 'a_batch_size', which is how many by each author should be in the batch (batch_size is number of authors)
   │   ├── author_word_dataset.py - Same as above only at word level instead of line level
   │   ├── (the "mixed_author" datasets have different splits which mix authors over the splits)
-  │   ├── font_dataset.py - dataset to render fonts as images. Required TextFlow (and is commented out in data_loaders.py)
+  │   ├── author_rimes_dataset.py - Same as author_hw_dataset.py, but for RIMES words
+  │   ├── author_rimeslines_dataset.py - Same as author_hw_dataset.py, but for RIMES lines
+  │   ├── synth_hw_dataset.py - For training a HWR model using the generated images
+  │   ├── create_synth_text_dataset.py - Generate images for synth_hw_dataset.py (although it can generate them on the fly)
   │   └── test*.py - This are scripts to run through a dataset and simply display what's being returned. For debugging purposes.
   │
   ├── logger/ - for training process logging
@@ -123,7 +129,7 @@ Some modes need the datasets styles in a pickle. Use `get_styles.py` to extract 
   │
   ├── saved/ - default checkpoints folder
   │
-  ├── configs/ - configuration files to reproducibility
+  ├── configs/ - configuration files for reproducibility
   ├── old_configs/ - all the other config files I've used during development/other projects
   │
   ├── trainer/ - trainers
