@@ -1,4 +1,7 @@
-# Handwriting... with style!
+# Handwriting line generation
+
+Handwriting... with style!
+
 This is the code for the paper "Text and Style Conditioned GAN for the Generation of Offline-Handwriting Lines" published at BMVC 2020. https://arxiv.org/abs/2009.00678
 
 This was originally Brian Davis's summer 2019 internship project at Adobe.
@@ -351,3 +354,4 @@ The config file is saved in the same folder. (as a reference only, the config is
 
 Save styles using `get_styles.py`
 Then `umap_styles.py styles.pkl [image dir]`
+
