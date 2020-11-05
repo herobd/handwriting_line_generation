@@ -1,12 +1,6 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 from datasets import hw_dataset
 import math
-import sys
+import sys, os
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
 from matplotlib.patches import Polygon
@@ -14,17 +8,21 @@ import numpy as np
 import torch
 import cv2
 
+saveHere=None
+linenum=0
+
 def display(data):
+    global saveHere, linenum
+    gts=[]
     batchSize = data['image'].size(0)
     for b in range(batchSize):
         #print (data['img'].size())
-        img = (data['image'][b].permute(1,2,0)+1)/2.0
+        img = 1 - (data['image'][b].permute(1,2,0)+1)/2.0
         label = data['label']
         gt = data['gt'][b]
-        print(label[:data['label_lengths'][b],b])
-        print(gt)
-
-        cv2.imwrite('out/%s.png' % data['name'][b], img.numpy())
+        gts.append(gt)
+        #print(label[:data['label_lengths'][b],b])
+        #print(gt)
 
         #cv2.imshow('line',img.numpy())
         #cv2.waitKey()
@@ -39,7 +37,12 @@ def display(data):
         #    ax_im.imshow(img)
 
         #plt.show()
-    print('batch complete')
+        if saveHere is not None:
+            cv2.imwrite(os.path.join(saveHere,'{}.png').format(linenum),img.numpy()*255)
+            linenum+=1
+        
+    #print('batch complete')
+    return gts
 
 
 if __name__ == "__main__":
@@ -52,8 +55,8 @@ if __name__ == "__main__":
         repeat = int(sys.argv[3])
     else:
         repeat=1
-    data=hw_dataset.HWDataset(dirPath=dirPath,split='train',config={
-        'img_height': 64,
+    data=hw_dataset.HWDataset(dirPath=dirPath,split='test',config={
+        'img_height': 128,
         'char_file' : 'data/IAM_char_set.json',
         'center_pad': False
 })
@@ -68,9 +71,14 @@ if __name__ == "__main__":
         print(i)
         dataLoaderIter.next()
         #display(data[i])
+    gts=[]
     try:
         while True:
             #print('?')
-            display(dataLoaderIter.next())
+            gts+=display(dataLoaderIter.next())
     except StopIteration:
         print('done')
+
+    with open(os.path.join(dirPath,'test_gt.txt'),'w') as out:
+        for gt in gts:
+            out.write(gt+'\n')

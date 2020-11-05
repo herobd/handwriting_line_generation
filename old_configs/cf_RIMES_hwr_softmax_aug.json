@@ -1,0 +1,69 @@
+{
+    "name": "RIMES_hwr_softmax_aug",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "AuthorRIMESDataset",
+
+        "Xdata_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",
+        "data_dir": "../data/RIMES/",
+        "batch_size": 40,
+        "a_batch_size": 1,
+        "shuffle": true,
+        "num_workers": 6,
+
+        "augmentation": true,
+        "img_height": 64,
+        "char_file": "../data/RIMES/characterset_train2009.json",
+        "center_pad": false
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 80
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.001,
+        "weight_decay": 0
+    },
+    "loss": {
+        "recog": "CTCLoss"
+    },
+    "loss_weights": {
+        "recog": 1
+    },
+    "loss_params": 
+        {
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 50000,
+        "save_dir": "../saved/",
+        "val_step": 1000,
+        "save_step": 25000,
+        "save_step_minor": 250,
+        "log_step": 100,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "skip_auto": true,
+
+
+        "use_learning_schedule": false
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 77,
+        "hwr": "CRNN_group_norm_softmax",
+        "generator": "none",
+        "style": "none"
+    }
+}

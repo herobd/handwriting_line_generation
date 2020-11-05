@@ -1,9 +1,3 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 from datasets import author_hw_dataset
 import math
 import sys
@@ -24,21 +18,29 @@ def display(data):
         #print (data['img'].size())
         img = (data['image'][b].permute(1,2,0)+1)/2.0
         maskb = (data['mask'][b].permute(1,2,0)+1)/2.0
+        fg_mask = (data['fg_mask'][b].permute(1,2,0)+1)/2.0
+        #changed_img = (data['changed_image'][b].permute(1,2,0)+1)/2.0
         label = data['label']
         gt = data['gt'][b]
         #print(label[:data['label_lengths'][b],b])
-        print(data['name'][b])
+        print('{}: {}'.format(data['name'][b],gt))
         #if data['spaced_label'] is not None:
         #    print('spaced label:')
         #    print(data['spaced_label'][:,b])
-        print(gt)
+        #print(gt)
 
         widths.append(img.size(1))
         
         draw=True
-        if draw and 'rapid' in gt:
-            cv2.imshow('line',img.numpy())
-            cv2.imshow('mask',maskb.numpy())
+        if draw :
+            #cv2.imshow('line',img.numpy())
+            #cv2.imshow('mask',maskb.numpy())
+            #cv2.imwrite('out/mask{}.png'.format(b),maskb.numpy()*255)
+            #cv2.imwrite('out/fg_mask{}.png'.format(b),fg_mask.numpy()*255)
+            #cv2.imwrite('out/changed_img{}.png'.format(b),changed_img.numpy()*255)
+
+            #cv2.imwrite('out/img{}.png'.format(b),img.numpy()*255)
+            cv2.imshow('out/img{}.png'.format(b),img.numpy()*255)
 
             if data['top_and_bottom'] is not None:
                 center_line = data['center_line'][b]
@@ -50,8 +52,8 @@ def display(data):
                     outline[int((center_line[h]-top_and_bottom[0,h]).item()),h] = (255,0,0)
                     outline[int((center_line[h]+top_and_bottom[1,h]).item()),h] = (0,0,255)
                     outline[int(center_line[h]),h] = (0,255,0)
-                cv2.imshow('top_and_bottom',outline)
-            cv2.waitKey()
+                #cv2.imshow('top_and_bottom',outline)
+            #cv2.waitKey()
 
         #fig = plt.figure()
 
@@ -76,26 +78,27 @@ if __name__ == "__main__":
         repeat = int(sys.argv[3])
     else:
         repeat=1
-    data=author_hw_dataset.AuthorHWDataset(dirPath=dirPath,split='valid',config={
+    data=author_hw_dataset.AuthorHWDataset(dirPath=dirPath,split='test',config={
         'img_height': 64,
-        'Xmax_width': 500,
+        'max_width': 1300,
         'char_file' : 'data/IAM_char_set.json',
         'center_pad': False,
-        'batch_size':2,
-        'a_batch_size':4,
+        'a_batch_size':2,
         'Xmask_post': ['true','thresh'],
         'mask_post': ["thresh","dilateCircle","errodeCircle"],
         #'mask_post': ['thresh','dilateCircle','errodeCircle','smaller', 'errodeCircle','dilateCircle', 'smaller', 'errodeCircle','dilateCircle'],
         #'mask_post': ['thresh','dilateCircle','errodeCircle', 'smaller', 'errodeCircle','dilateCircle',  'dilateCircle','errodeCircle'],
         'mask_random': False,
-        'Xaugmentation': True,
+        #'augmentation': 'normalization',
         'Xspaced_loc': '../saved/spaced/spaced.pkl',
         'overfit': False,
-        'short':1
+        'short':1,
+        "fg_masks_dir": "../data/IAM/fg_masks"
 })
+    print('num authors: {}'.format(len(data.author_list)))
     #data.cluster(start,repeat,'anchors_rot_{}.json')
 
-    dataLoader = torch.utils.data.DataLoader(data, batch_size=1, shuffle=True, num_workers=0, collate_fn=author_hw_dataset.collate)
+    dataLoader = torch.utils.data.DataLoader(data, batch_size=4, shuffle=True, num_workers=0, collate_fn=author_hw_dataset.collate)
     dataLoaderIter = iter(dataLoader)
 
         #if start==0:

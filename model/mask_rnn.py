@@ -1,12 +1,7 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 import torch
 import torch.nn as nn
 from model.net_builder import getGroupSize
+from model.pure_gen import PixelNorm
 
 class CountRNN(nn.Module):
     def __init__(self,class_size,style_size, hidden_size=128,n_out=1):
@@ -32,20 +27,86 @@ class CountRNN(nn.Module):
 
         return output*self.std + self.mean
 
+class CountCNN(nn.Module):
+    def __init__(self,class_size,style_size, hidden_size=128,n_out=1, emb_style=0):
+        super(CountCNN, self).__init__()
+
+        self.cnn = nn.Sequential(
+                nn.Conv1d(class_size+style_size,hidden_size,kernel_size=3,stride=1,padding=1),
+                nn.GroupNorm(getGroupSize(hidden_size),hidden_size),
+                nn.Dropout2d(0.1),
+                nn.ReLU(inplace=True),
+                nn.Conv1d(hidden_size,hidden_size//2,kernel_size=3,stride=1,padding=1),
+                nn.GroupNorm(getGroupSize(hidden_size//2),hidden_size//2),
+                nn.Dropout2d(0.1),
+                nn.ReLU(inplace=True),
+                nn.Conv1d(hidden_size//2,hidden_size//4,kernel_size=3,stride=1,padding=1),
+                nn.GroupNorm(getGroupSize(hidden_size//4),hidden_size//4),
+                nn.ReLU(inplace=True),
+                nn.Conv1d(hidden_size//4,n_out,kernel_size=1,stride=1,padding=0),
+                )
+
+        if n_out==1 or n_out>2:
+            self.mean = nn.Parameter(torch.FloatTensor(1,n_out).fill_(2))
+            self.std = nn.Parameter(torch.FloatTensor(1,n_out).fill_(1))
+        else:
+            self.mean = nn.Parameter(torch.FloatTensor([2.0,0.0])) #These are educated guesses to give the net a good place to start
+            self.std = nn.Parameter(torch.FloatTensor([1.5,0.5]))
+        
+        if emb_style>0:
+            if type(emb_style) is float:
+                drop=0.125
+            else:
+                drop=0.5
+            layers = [PixelNorm()]
+            for i in range(int(emb_style)):
+                layers.append(nn.Linear(style_size, style_size))
+                layers.append(nn.Dropout(drop,True))
+                layers.append(nn.LeakyReLU(0.2,True))
+            self.emb_style = nn.Sequential(*layers)
+        else:
+            self.emb_style = None
+
+    def forward(self, input, style):
+        if self.emb_style is not None:
+            style = self.emb_style(style)
+        input = input.permute(1,2,0)
+        style = style[...,None].expand(-1,-1,input.size(2))
+        output = self.cnn(torch.cat((input,style),dim=1))
+
+        output = output.permute(2,0,1) #Back to Temporal,batch,channel
+        
+        assert(not torch.isnan(output).any() and not torch.isinf(output).any())
+        assert(not torch.isnan(self.std).any())
+        assert(not torch.isnan(self.mean).any())
+        return output*self.std + self.mean
+
 class CreateMaskRNN(nn.Module):
-    def __init__(self,class_size,style_size, hidden_size=128):
+    def __init__(self,class_size,style_size, hidden_size=128,shallow=False):
         super(CreateMaskRNN, self).__init__()
 
-        self.rnn1 = nn.GRU(class_size+style_size, hidden_size, bidirectional=True, dropout=0.25, num_layers=2)
-        self.upsample = nn.Sequential(  
-                                        nn.ConvTranspose1d(2*hidden_size,hidden_size,kernel_size=4,stride=2,padding=0),
-                                        nn.GroupNorm(getGroupSize(hidden_size),hidden_size),
-                                        nn.ReLU(inplace=True),
-                                        nn.ConvTranspose1d(hidden_size,hidden_size//2,kernel_size=4,stride=2,padding=0),
-                                        nn.GroupNorm(getGroupSize(hidden_size//2),hidden_size//2),
-                                        nn.ReLU(inplace=True)
-                                        )
-        self.rnn2 = nn.GRU(hidden_size//2, hidden_size//2, bidirectional=True, dropout=0.25, num_layers=2)
+        if shallow:
+            self.rnn1 = nn.GRU(class_size+style_size, hidden_size, bidirectional=True, dropout=0.25, num_layers=1)
+            self.upsample = nn.Sequential(  
+                                            nn.ConvTranspose1d(2*hidden_size,hidden_size,kernel_size=4,stride=2,padding=0),
+                                            nn.GroupNorm(getGroupSize(hidden_size),hidden_size),
+                                            nn.ReLU(inplace=True),
+                                            nn.ConvTranspose1d(hidden_size,hidden_size//2,kernel_size=4,stride=2,padding=0),
+                                            nn.GroupNorm(getGroupSize(hidden_size//2),hidden_size//2),
+                                            nn.ReLU(inplace=True)
+                                            )
+            self.rnn2 = nn.GRU(hidden_size//2, hidden_size//2, bidirectional=True, dropout=0.25, num_layers=1)
+        else:
+            self.rnn1 = nn.GRU(class_size+style_size, hidden_size, bidirectional=True, dropout=0.25, num_layers=2)
+            self.upsample = nn.Sequential(  
+                                            nn.ConvTranspose1d(2*hidden_size,hidden_size,kernel_size=4,stride=2,padding=0),
+                                            nn.GroupNorm(getGroupSize(hidden_size),hidden_size),
+                                            nn.ReLU(inplace=True),
+                                            nn.ConvTranspose1d(hidden_size,hidden_size//2,kernel_size=4,stride=2,padding=0),
+                                            nn.GroupNorm(getGroupSize(hidden_size//2),hidden_size//2),
+                                            nn.ReLU(inplace=True)
+                                            )
+            self.rnn2 = nn.GRU(hidden_size//2, hidden_size//2, bidirectional=True, dropout=0.25, num_layers=2)
         self.out = nn.Linear(hidden_size, 2)
 
         self.mean = nn.Parameter(torch.FloatTensor(1).fill_(10))
@@ -66,6 +127,10 @@ class CreateMaskRNN(nn.Module):
 
         output = self.out(t_rec)  # [T * b, nOut]
         output = output.view(T, b, -1) # reshape to get len,batch,channel
+
+        assert(not torch.isnan(output).any())
+        assert(not torch.isnan(self.std).any())
+        assert(not torch.isnan(self.mean).any())
 
         return output*self.std + self.mean
 

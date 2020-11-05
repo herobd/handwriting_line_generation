@@ -1,69 +1,174 @@
 # Handwriting... with style!
-This was an Adobe Research intern project performed by [Brian Davis](https://scholar.google.com/citations?user=jXDpalIAAAAJ&hl=en) that resulted in [Text and Style Conditioned GAN for Generation of Offline Handwriting Lines](https://www.bmvc2020-conference.com/assets/papers/0815.pdf) published at [BMVC 2020](https://www.bmvc2020-conference.com/).  Since the end of the internship, Brian has greatly improved upon the method, and the [official code repo](https://github.com/herobd/hw_with_style) for the paper is hosted separately.
+This is the code for the paper "Text and Style Conditioned GAN for the Generation of Offline-Handwriting Lines" published at BMVC 2020. https://arxiv.org/abs/2009.00678
 
-The goal of this project is to extract a style vector from handwriting example image(s) (lines), and then, conditioned on that style vector and some given text, generate new handwriting images.
+This was originally Brian Davis's summer 2019 internship project at Adobe.
+
+Code structure based on victoresque pytorch template.
 
 ## Requirements
 * Python 3.x
-* PyTorch 1.1 (greater may have some errors that need fixed still)
+* PyTorch >1.0
+* torchvision
+* opencv
+* scikit-image
+* editdistance
 
 
-To use deformable convs you'll need to copy this repo in the main directory: https://github.com/open-mmlab/mmdetection
-Install using this command in the mmdetection directory: `python setup.py develop`
-This code only compiles on a GPU version Pytorch, CPU-only does not work.
+
+## Reproducability instructions
+In the `configs` directory are several jsons which have the parameters used for the paper. The `"data_loader": "data_dir"` needs set to the location of the dataset directory. You can also adjust the GPU options here.
+
+First the handwriting reconition model and feature encoder networks need trained.
+
+HWR: `python train.py -c configs/cf_IAM_hwr_cnnOnly_batchnorm_aug.json`
+
+Encoder: `python train.py -c configs/cf_IAM_auto_2tight_newCTC.json`
+
+Then the generator can be trained: `python train.py -c configs/cf_IAMslant_noMask_charSpecSingleAppend_GANMedMT_autoAEMoPrcp2tightNewCTCUseGen_balB_hCF0.75_sMG.json`
+
+RIMES will use
+
+HWR: `python train.py -c configs/cf_RIMESLines_hwr_cnnOnly_batchnorm_aug.json`
+
+GAN: `python train.py -c configs/cf_RIMESLinesslant_noMask_charSpecSingleAppend_GANMedMT_autoAEMoPrcp2tightNewCTCUseGen_balB_hCF0.75_sMG.json`
+
+RIMES resuses the IAM encoder.
+
+Figures for the paper were made using `generate.py`
+
+## Using generate.py
 
 
-### Using generate.py
+Usage: `python generate.py -c path/to/snapshot.pth -d output_directory -g #[optional gpu flag] -s style_pickle_file[optional] -T[optional, use test set]
 
-Usage: `python generate.py -c path/to/snapshot.pth -l list_file.json`
+You can also use `-h`
+
+It has several "modes" to select from once it's loaded the model. Use `h` to display them. Most will ask for additional input (desired text, number of styles, etc). The output is saved to the supplied `-d` location.
+
+Some modes need the datasets styles in a pickle. Use `get_styles.py` to extract these. Some modes just want example images.
+
+`python get_styles.py -c path/to/snapshot.pth -d output_directory -g #[optional gpu flag] -T[optional, do test set, otherwise does trian and valid]`
+
+## Folder Structure
+  ```
+  
+  │
+  ├── train.py - Use this to train
+  ├── new_eval.py - Use this to evaluate and save images. Some examples of how to run this in notes.txt. This was used to generate the reconstruction images for the paper.
+  ├── get_styles.py - This uses a trained model to extract style vectors from a dataset and save them.
+  ├── generate.py - This is an interactive script to generate images using a trained model, including interpolations. Figures for the paper were generally created using this.
+  ├── umap_styles.py - This generates the umap plots used in the paper
+  ├── graph.py - Display plots given a training snapshot
+  ├── old_generate.py - This will generate images given a json having lists of style images, text lines, and output paths. (I don't know if this works still)
+  ├── eval_writer_id.py - was intended to evaluate writer identification performance given the style vectors, but I don't know if I ever got it working correctly.
+  │
+  ├── base/ - abstract base classes
+  │   ├── base_data_loader.py - abstract base class for data loaders (unused?)
+  │   ├── base_model.py - abstract base class for models
+  │   └── base_trainer.py - abstract base class for trainers
+  │
+  ├── data/ - this has various files that were convenient to keep with the project
+  ├── data_loader/ 
+  │   └── data_loaders.py - This just gets you the right dataset
+  │
+  ├── datasets/ - default datasets folder
+  │   ├── hw_dataset.py - basic dataset made to handle IAM data at the line level
+  │   ├── author_hw_dataset.py - This sorts instances by author and has a 'a_batch_size', which is how many by each author should be in the batch (batch_size is number of authors)
+  │   ├── author_word_dataset.py - Same as above only at word level instead of line level
+  │   ├── (the "mixed_author" datasets have different splits which mix authors over the splits)
+  │   ├── font_dataset.py - dataset to render fonts as images. Required TextFlow (and is commented out in data_loaders.py)
+  │   └── test*.py - This are scripts to run through a dataset and simply display what's being returned. For debugging purposes.
+  │
+  ├── logger/ - for training process logging
+  │   └── logger.py
+  │
+  ├── model/ - models, losses, and metrics
+  │   ├── loss.py - has all losses, here or imported here
+  │   ├── MUNIT_networks.py - has code from MUNIT paper as well as my own generator classes
+  │   ├── aligned_l1_loss.py - l1 loss after aligning input and target  by sliding them along eachother
+  │   ├── attention.py - functions for multi-head dot product attention
+  │   ├── author_classifier.py - auxiliary patch-based model to classify author id
+  │   ├── char_cond_discriminator_ap.py - discriminator with seperate classifying heads for each character, accepts character specific style vectors
+  │   ├── char_gen.py - generator model which accepts character specific style vectors
+  │   ├── cnn_lstm.py - Code from Start, Follow, Read, with minor tweaks to allow Group Norm and logsoftmax at the end
+  │   ├── cnn_lstm_skip.py - above model, but has skip conenction past LSTM layers
+  │   ├── cnn_only_hwr.py - Alternate network to do HWR without recourrent layers. Doesn't work too well.
+  │   ├── google_hwr.py - Non-RNN based HWR based on "A Scalable Handwritten Text Recognition System"
+  │   ├── deform_hwr.py - Code to allow ElasticDeform and DeformableConvs in HWR network without style (for baseline)
+  │   ├── discriminator.py - Has various discriminators I tried, all using spectral norm
+  │   ├── cond_discriminator_ap.py - Discriminator used in paper. Has many options to make it conditioned on style, text
+  │   ├── cond_discriminator.py - Older version, less options, doesn't use average pooling
+  │   ├── dtw_loss.py - l1 loss after aligning input and target using dynamic programming. Didn't have success with this.
+  │   ├── elastic_layer.py - Chris's code along with my modification to allow style appending
+  │   ├── grcl.py - Gated Recurrent Convolution Layer
+  │   │
+  │   ├── hw_with_style.py - Primary model which contains all submodels.
+  │   │
+  │   ├── join_net.py - Part of Curtis's code for training an aligning network. Never got this working
+  │   ├── key_loss.py - Defines the loss to cause keys to be alteast some distance from their closest neighbor
+  │   ├── lookup_style.py - intended to create a learned style vector for each author, rather than extracting them from example images
+  │   ├── mask_rnn.py - Both spacing and mask generation networks, RNN and CNN based
+  │   ├── net_builder.py - various auxilary network construction functions from previous project. I think I only use "getGroupSize()" to use with Group Norm
+  │   ├── pretrained_gen.py - generator model I experminetned with where it was pretrained as the decoder of an autoencoder
+  │   ├── pure_gen.py - contains model from paper (PureGen) as well as several variations I experimented with
+  │   ├── simple_gan.py - None-StyleGAN based generator, and a simpler discriminator
+  │   ├── pyramid_l1_loss.py - exactly what it says
+  │   ├── style.py - old style extractor network
+  │   ├── char_style.py - style extractor from paper, that uses character specific heads
+  │   ├── vae_style.py - style extractor which predicts two parts for using with VAE
+  │   └── style_hwr.py - Various models of HWR that use a style vector.
+  │
+  ├── saved/ - default checkpoints folder
+  │
+  ├── configs/ - configuration files to reproducibility
+  ├── old_configs/ - all the other config files I've used during development/other projects
+  │
+  ├── trainer/ - trainers
+  │   ├── hw_with_style_trainer.py - This has the code to run training (there are two methods for training, depending on whether a curriculum is specified)
+  │   └── trainer.py
+  │
+  └── utils/
+      ├── util.py - importantly has code to create mask from handwriting image and extact centerline from handwriting image
+      ├── augmentation.py - Chris's brightness augmentation
+      ├── curriculum.py - this object handles tracking the curriculum during training
+      ├── character_set.py - Gets the character set from label files (modfied from Start,Follow,Read code)
+      ├── error_rates.py - character error, etc
+      ├── grid_distortion.py - Curtis's augmentation
+      ├── metainit.py - I tried getting this paper to work: "MetaInit: Initialzing learning by learning to initialize"
+      ├── normalize_line.py - functions to noramlize a line image
+      ├── parseIAM.py - parses the xmls IAM has
+      ├── parseRIMESlines.py - parse the GT for RIMES into line images
+      ├── string_utils.py - used for converting string characters to their class numbers and back
+      └── util.py - various functions
+  ```
+
+
+## Using old_generate.py
+
+I'm not sure if this still works...
+
+Usage: `python old_generate.py -c path/to/snapshot.pth -l list_file.json`
 
 The list file has the following format:
 
-It is a list of "jobs":
+It is a list of "jobs. Each job looks like
 
 ```
-[
-    {
-        "style": ["path/image1", "path/image1",...],
-        "text": ["generate this text", "and this text", ...],
-        "out": ["path/save/this", "path/save/that", ...]
-    },
-    {
-        another one...
-    }
-]
+{
+    "style": ["path/image1", "path/image1",...],
+    "text": ["generate this text", "and this text", ...],
+    "out": ["path/save/this", "path/save/that", ...]
+}
 ```
 
 All of the style images are appended together to extrac a single style and it is used to generate the given texts.
 
 You can do a single image using the flags `-s "path/image1 path/image2" -t "generate this text" -o path/save/this`.
 
-If you want to interpolate, add `"interpolate":0.1"` to the job. The float is the interpolation step size. It must have only one text (and out path) and each style image will have a style extracted from it individually. The interpolation will be between each of the images' styles (and back to the first one).
+If you want to interpolate, add `"interpolate:0.1"` to the object. The float is the interpolation step size. It must have only one text (and out path) and each style image will have a style extracted from it individually. The interpolation will be between each of the images' styles (and back to the first one).
 
 
-### Using new_eval.py
-
-Running `python new_eval.py -c path/to/checkpoint.pth` will run the validation set and return the loss and CER
-
-To write images, use these flags: `-d ../out -n 20 -e [recon,recon_gt_mask,mask,gen,gen_mask] -a data_loader=short=1`
-
-`-d` specifies the output directory, `-n` specifies how many images to output
-`-e' has which images to write:
-
-* `recon`: reconstruction using predicted mask
-* `recon_gt_mask`: reconstruction using GT mask
-* `mask`: predicted mask for reconstruction
-* `gen`: instance generated using novel style
-* 'gen_mask`: mask generated for above instance
-
-`-a` flag allows changing of the config file. use `key=nested_key=value,another_key=value` format. The `data_loader=short=1` above prints less examples per author (more authors)
-
-
-You can also use this script to save style vectors (for use in umap_styles.py): `-a save_style=path/to/save/style.pkl,saveStyleEvery=5000`
-This will only save the validation set is used alone (in `val_style.pkl`). If training set is desired, use `-n 99999999`, or whatever the size of your dataset is.
-It saves a `(val_)style.pkl.#` every `saveStyleEvery` instances. These are automatically globbed by `umap_styles.py` if you pass it `(val_)style.pkl`. Make `saveStyleEvery` big if you don't want this.
-
-### Config file format
+## Config file format
 Config files are in `.json` format. 
   ```
 {
@@ -76,7 +181,7 @@ Config files are in `.json` format.
     "data_loader": {
         "data_set_name": "AuthorHWDataset",                     #class name
 
-        "data_dir": "/path/to/data/",    
+        "data_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",    #IAM loaction on sensei
         "Xdata_dir": "../data/IAM/",
         "batch_size": 1,
         "a_batch_size": 2,
@@ -160,12 +265,12 @@ Config files are in `.json` format.
         "monitor": "loss",
         "monitor_mode": "none",
         "space_input": true,
-        "style_together": true,                             #append images together (by author) to extract style vector
-        "use_hwr_pred_for_style": true,                     #use raw HWR pred as input to style extraction (instead of cheating with aligned GT)
-        "hwr_without_style":true,                           #Change to true to pass style vector to HWR model
-        "slow_param_names": ["keys"],                       #Multiplies weight updates by 0.1 for param names containing any in the list
-        "curriculum": {                                     #Training curriculum
-            "0": [["auto"],["auto-disc"]],                  #   iteration to start at: list of list, iteration cycle and components/losses for each iteration
+        "style_together": true,                             #append sty
+        "use_hwr_pred_for_style": true,
+        "hwr_without_style":true,
+        "slow_param_names": ["keys"],
+        "curriculum": {
+            "0": [["auto"],["auto-disc"]],
             "1000": [["auto", "auto-gen"],["auto-disc"]],
             "80000": [["count","mask","gt_spaced","mask-gen"],["auto-disc","mask-disc"]],
             "100000": [  [1,"count","mask","gt_spaced","mask-gen"],
@@ -175,10 +280,10 @@ Config files are in `.json` format.
                         [2,"disc","mask-disc"],
                         [2,"auto-disc","mask-disc"]]
         },
-        "balance_loss": true,                               #use balancing between CTC loss and reconstruction/adversarial loss
-        "interpolate_gen_styles": "extra-0.25",             #interpolate instead of pulling styles out of a hat. This tells it to possibly extrapolate by 0.25 of the distance between the styles
+        "balance_loss": true,
+        "interpolate_gen_styles": "extra-0.25",
 
-	"text_data": "data/lotr.txt",                       #Text file for generation
+	"text_data": "data/lotr.txt",
 
         "use_learning_schedule": false
     },
@@ -209,24 +314,18 @@ Config files are in `.json` format.
 }
   ```
 
-### Using config files
+##  Using config files
 Modify the configurations in `.json` config files, then run:
 
   ```
   python train.py --config config.json
   ```
 
-### Resuming from checkpoints
+##  Resuming from checkpoints
 You can resume from a previously saved checkpoint by:
 
   ```
   python train.py --resume path/to/checkpoint
-  ```
-
-You can overwrite th config from the sanpshot with
-
-  ```
-  python train.py --config new_config.json --resume path/to/checkpoint
   ```
 
 
@@ -247,3 +346,8 @@ The config file is saved in the same folder. (as a reference only, the config is
   }
   ```
 
+
+## UMAPing
+
+Save styles using `get_styles.py`
+Then `umap_styles.py styles.pkl [image dir]`

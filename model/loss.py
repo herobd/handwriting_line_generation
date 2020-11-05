@@ -1,9 +1,3 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 import torch.nn.functional as F
 import torch
 import utils
@@ -20,6 +14,7 @@ from model.pyramid_l1_loss import pyramidL1Loss
 from model.dtw_loss import DTWLoss
 from model.key_loss import pushMinDist
 from torch.nn.functional import cross_entropy
+from model.triplet_loss import hardTriplet
 
 def my_loss(y_input, y_target):
     return F.nll_loss(y_input, y_target)
@@ -30,6 +25,8 @@ def MSE(y_input, y_target):
     return F.mse_loss(y_input, y_target.float())
 def MSELoss(y_input, y_target):
     return F.mse_loss(y_input, y_target.float())
+def CrossEntropyLoss(input,target):
+    return F.cross_entropy(input,target)
 
 def L1Loss(input,target):
     return F.l1_loss(input,target)
@@ -37,8 +34,16 @@ def HingeLoss(input,target,threshold):
     diff = torch.abs(input-target)
     diff[diff<threshold] = 0
     return diff.mean()
+def AdaptiveHingeLoss(input,target,threshold):
+    batch_size=target.size(0)
+    diff = torch.abs(input-target)
+    std = torch.std(diff.view(batch_size,-1),dim=1)[:,None,None,None]
+    mean = torch.mean(diff.view(batch_size,-1),dim=1)[:,None,None,None]
+    diff[torch.abs(diff-mean)/std<threshold] = 0
+    return diff.mean()
 def CTCLoss(input,target,input_len,target_len):
-    return F.ctc_loss(input,target,input_len,target_len)
+    ret = F.ctc_loss(input,target,input_len,target_len)
+    return torch.where(torch.isinf(ret), torch.zeros_like(ret), ret)
 
 def CrossEntropyLoss1D(input,target, blank_weight=1):
     #press space into batch
@@ -65,6 +70,9 @@ def CrossEntropyLoss1D(input,target, blank_weight=1):
         return F.cross_entropy(input,target,weight=weights.to(target.device))
     else:
         return F.cross_entropy(input,target)
+
+def L1Reg(data):
+    return data.abs().mean()
 
 #def detect_alignment_loss(predictions, target,label_sizes,alpha_alignment, alpha_backprop):
 #    return alignment_loss(predictions, target, label_sizes, alpha_alignment, alpha_backprop)

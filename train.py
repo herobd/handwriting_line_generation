@@ -1,25 +1,16 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
-
+import torch
 import os
 import sys
 import signal
 import json
 import logging
 import argparse
-import torch
 from model import *
 from model.loss import *
 from model.metric import *
 from data_loader import getDataLoader
 from trainer import *
 from logger import Logger
-#import requests
-
 
 
 logging.basicConfig(level=logging.INFO, format='')
@@ -32,6 +23,7 @@ def set_procname(newname):
         libc.prctl(15, byref(buff), 0, 0, 0) #Refer to "#define" of "/usr/include/linux/prctl.h" for the misterious value 16 & arg[3..5] are zero as the man page says.
 
 def main(config, resume):
+    supercomputer = config['super_computer'] if 'super_computer' in config else False
     #set_procname(config['name'])
     #np.random.seed(1234) I don't have a way of restarting the DataLoader at the same place, so this makes it totaly random
     train_logger = Logger()
@@ -44,6 +36,11 @@ def main(config, resume):
     if 'style' in config['model'] and 'lookup' in config['model']['style']:
         model.style_extractor.add_authors(data_loader.dataset.authors) ##HERE
     model.summary()
+    if config['trainer']['class']=='HWRWithSynthTrainer':
+        gen_model = model
+        model = model.hwr
+        gen_model.hwr=None
+        #config['gen_model$'] = gen_model
     if type(config['loss'])==dict:
         loss={}#[eval(l) for l in config['loss']]
         for name,l in config['loss'].items():
@@ -67,6 +64,8 @@ def main(config, resume):
                       data_loader=data_loader,
                       valid_data_loader=valid_data_loader,
                       train_logger=train_logger)
+    if config['trainer']['class']=='HWRWithSynthTrainer':
+        trainer.gen = gen_model
 
     name=config['name']
     def handleSIGINT(sig, frame):
@@ -86,6 +85,8 @@ if __name__ == '__main__':
                         help='config file path (default: None)')
     parser.add_argument('-r', '--resume', default=None, type=str,
                         help='path to latest checkpoint (default: None)')
+    parser.add_argument('-s', '--soft_resume', default=None, type=str,
+                        help='path to checkpoint that may or may not exist (default: None)')
     parser.add_argument('-g', '--gpu', default=None, type=int,
                         help='gpu to use (overrides config) (default: None)')
     #parser.add_argument('-m', '--merged', default=False, action='store_const', const=True,
@@ -96,7 +97,12 @@ if __name__ == '__main__':
     config = None
     if args.config is not None:
         config = json.load(open(args.config))
-    if args.resume is not None and (config is None or 'override' not in config or not config['override']):
+    if  args.resume is None and  args.soft_resume is not None:
+        if not os.path.exists(args.soft_resume):
+            print('WARNING: resume path ({}) was not found, starting from scratch'.format(args.soft_resume))
+        else:
+            args.resume = args.soft_resume
+    elif args.resume is not None and (config is None or 'override' not in config or not config['override']):
         if args.config is not None:
             logger.warning('Warning: --config overridden by --resume')
         config = torch.load(args.resume)['config']
@@ -106,23 +112,22 @@ if __name__ == '__main__':
             directory = os.fsencode(path)
             for file in os.listdir(directory):
                 filename = os.fsdecode(file)
-                if filename!='config.json': 
+                if 'checkpoint' in filename: 
                     assert False, "Path {} already used!".format(path)
     assert config is not None
+    supercomputer = config['super_computer'] if 'super_computer' in config else False
+
+    name=config['name']
+    file_name = args.config
+    file_name = file_name[file_name.rindex('/')+4:-5] #remove path
+    if name!=file_name:
+        raise Exception('ERROR, name and file name do not match, {} != {} ({})'.format(name,file_name,args.config))
 
     if args.gpu is not None:
         config['gpu']=args.gpu
         print('override gpu to '+str(config['gpu']))
-    try: 
-        if config['cuda']:
-            with torch.cuda.device(config['gpu']):
-                main(config, args.resume)
-        else:
+    if config['cuda']:
+        with torch.cuda.device(config['gpu']):
             main(config, args.resume)
-    except Exception as er:
-        name=config['name']
-
-        raise er
     else:
-        name=config['name']
-        update_status(name,'DONE!')
+        main(config, args.resume)

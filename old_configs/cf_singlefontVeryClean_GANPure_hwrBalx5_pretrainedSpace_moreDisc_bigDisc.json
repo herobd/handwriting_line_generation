@@ -1,0 +1,114 @@
+{
+    "name": "singlefontVeryClean_GANPure_hwrBalx5_pretrainedSpace_moreDisc_bigDisc",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":true,
+    "data_loader": {
+        "data_set_name": "SynthTextDataset",
+
+        "data_dir": "../data/synthVeryCleanText5/",
+        "fontdir": "../data/fonts/single_font",
+        "textdir": "../data/",
+        "batch_size": 8,
+        "a_batch_size": 1,
+        "shuffle": true,
+        "num_workers": 4,
+
+        "img_height": 64,
+        "max_width": 4200,
+        "char_file": "../data/english_char_set.json",
+        "mask_post": ["thresh","dilateCircle","errodeCircle"],
+        "mask_random": false,
+        "use_fg_mask": true,
+        "include_stroke_aug": false,
+        "augmentation": "affine",
+        "refresh_self": false,
+        "set_size": 20000,
+        "num_processes": 7,
+        "use_before_refresh": 10,
+        "gen_type": "veryclean"
+    },
+    "validation": {
+        "batch_size":1
+    },
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.0000001,
+        "weight_decay": 0,
+        "betas": [0.5,0.99]
+    },
+    "optimizer_type_discriminator": "Adam",
+    "optimizer_discriminator": {
+        "lr": 0.00001,
+        "weight_decay": 0,
+        "betas": [0,0.9]
+    },
+    "loss": {
+        "genRecog": "CTCLoss"
+    },
+    "loss_weights": {
+        "discriminator": 1,
+        "generator": 1,
+        "genRecog": 0.0001
+    },
+    "loss_params":
+        {
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 700000,
+        "save_dir": "saved/",
+        "val_step": -1,
+        "save_step": 25000,
+        "save_step_minor": 250,
+        "log_step": 250,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "space_input": true,
+        "style_together": true,
+        "use_hwr_pred_for_style": true,
+        "hwr_without_style":true,
+        "slow_param_names": ["keys"],
+        "curriculum": {
+            "0": [  
+                        [1,"gen"],
+                        [5,"disc"],
+                        [1,"gen"],
+                        [5,"sample-disc"]]
+        },
+        "new_gen_freq": 0.8,
+        "forget_new_freq": 0.99,
+        "balance_loss": "sign_preserve_x5",
+
+	"text_data": "../data/english_text.txt",
+
+        "use_learning_schedule": false,
+        "cache_spaced_label": false,
+        "print_dir": "train_out/bigDisc"
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 131,
+        "generator": "PureGen",
+        "gen_dim": 256,
+        "hwr": "CRNN_batch_norm_softmax",
+        "pretrained_hwr": "saved/singlefont_ocr_softmax_aug/checkpoint-iteration2000.pth",
+        "hwr_frozen": true,
+        "style": "VAE-none",
+        "style_dim": 128,
+        "discriminator": "condAP wide, no style",
+        "disc_dim": 128,
+        "disc_use_pixel_stats": false,
+        "spacer": "duplicates",
+        "pretrained_spacer": "saved/singlefont_tiny_balPrsrvFx_condDiscAPActuallyStr_noBG_VAEnew_percept2tightWithAuto_aug/checkpoint-latest.pth",
+        "create_mask": false
+
+    }
+}

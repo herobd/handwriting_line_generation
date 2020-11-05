@@ -1,0 +1,74 @@
+{
+    "name": "allfontSmall_ocr_softmax_aug",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":true,
+    "data_loader": {
+        "data_set_name":"SynthTextDataset",
+        "data_dir": "../data/synthTextSmall/",
+        "fontdir": "../data/fonts/",
+        "textdir": "../data/",
+        "img_height": 24,
+        "max_width": 410,
+        "batch_size": 48,
+        "num_workers": 5,
+        "max_len": 16,
+        "shuffle": true,
+        "augmentation": "warp",
+        "set_size": 200000,
+        "refresh_self": false,
+        "use_before_refresh": 10,
+        "num_processes": 15,
+        "char_file":"../data/english_char_set.json",
+        "cropped_aug": true
+    },
+
+    "validation": {
+        "shuffle": false,
+        "batch_size": 64
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.001,
+        "weight_decay": 0
+    },
+    "loss": {
+        "recog": "CTCLoss"
+    },
+    "loss_weights": {
+        "recog": 1
+    },
+    "loss_params": 
+        {
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 1000000,
+        "save_dir": "saved/",
+        "val_step": 10000,
+        "save_step": 25000,
+        "save_step_minor": 250,
+        "log_step": 250,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "skip_auto": true,
+
+
+        "use_learning_schedule": false
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 131,
+        "hwr": "smallCRNN_batch_norm_softmax",
+        "generator": "none",
+        "style": "none"
+    }
+}

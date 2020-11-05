@@ -1,0 +1,143 @@
+{
+    "name": "fast_balPrsrv_Gskip_ohwr_condDiscAPActuallyStr_noBG_charSpec_aug",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "AuthorHWDataset",
+
+        "Xdata_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",
+        "data_dir": "../data/IAM/",
+        "batch_size": 1,
+        "a_batch_size": 2,
+        "shuffle": true,
+        "num_workers": 0,
+
+        "img_height": 64,
+        "max_width": 1300,
+        "char_file": "./data/IAM_char_set.json",
+        "mask_post": ["thresh","dilateCircle","errodeCircle"],
+        "mask_random": false,
+        "fg_masks_dir": "../data/IAM/fg_masks"
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 3,
+        "a_batch_size": 2
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.00001,
+        "weight_decay": 0,
+        "betas": [0.5,0.99]
+    },
+    "optimizer_type_discriminator": "Adam",
+    "optimizer_discriminator": {
+        "lr": 0.00001,
+        "weight_decay": 0,
+        "betas": [0,0.9]
+    },
+    "loss": {
+        "auto": "pyramidL1Loss",
+        "count": "MSELoss",
+        "mask": "HingeLoss",
+        "feature": "L1Loss",
+        "genRecog": "CTCLoss",
+        "genAutoStyle": "L1Loss"
+    },
+    "loss_weights": {
+        "auto": 1,
+        "discriminator": 1,
+        "generator": 0.1,
+        "count": 0.1,
+        "mask": 0.1,
+        "mask_generator": 0.01,
+        "mask_discriminator": 0.01,
+        "feature": 0.0000001,
+        "genRecog": 0.0001,
+        "style_discriminator": 0.1,
+        "style_generator": 0.01,
+        "genAutoStyle": 0.01
+
+    },
+    "loss_params":
+        {
+            "auto": {"weights":[0.4,0.3,0.3],
+                     "pool": "avg"},
+            "mask": {"threshold": 4}
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 700000,
+        "save_dir": "saved/",
+        "val_step": 5000,
+        "save_step": 25000,
+        "save_step_minor": 250,
+        "log_step": 250,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "space_input": true,
+        "style_together": true,
+        "use_hwr_pred_for_style": true,
+        "hwr_without_style":true,
+        "slow_param_names": ["keys"],
+        "curriculum": {
+            "0": [["auto"]],
+            "10000": [["auto"],["sample-disc"]],
+            "11000": [["auto", "auto-gen"],["sample-disc"]],
+            "30000": [["count","mask","mask-gen"],["mask-disc"]],
+            "39000": [["auto"],["count","mask","mask-gen"]],
+            "40000": [      
+                        ["count","mask","mask-gen"],
+                        ["auto","auto-gen","count","mask","gt_spaced","mask-gen"],
+                        ["auto","auto-mask","auto-gen"],
+                        [2,"sample-disc","mask-disc"],
+                        ["count","mask","mask-gen"],
+                        [2,"gen","gen-auto-style"],
+                        [2,"sample-disc","mask-disc"]
+                            ]
+        },
+        "balance_loss": "sign_preserve",
+        "interpolate_gen_styles": "extra-0.25",
+
+	"text_data": "../data/english_text.txt",
+
+        "use_learning_schedule": false,
+        "no_bg_loss": true,
+        "mix_style": false
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 80,
+        "generator": "CharSpacedWithMask",
+        "gen_dim": 128,
+        "gen_n_res1": 2,
+        "gen_n_res2": 2,
+        "gen_n_res3": 2,
+        "gen_use_skips": true,
+        "dist_map_text_for_gen": false,
+	"hwr": "CRNN_group_norm_softmax",
+        "pretrained_hwr": "saved/IAM_hwr_aug_softmax/checkpoint-latest.pth",
+        "hwr_frozen": true,
+        "style": "char",
+        "style_norm":"group",
+        "style_activ":"relu",
+        "style_dim": 128,
+        "char_style_dim": 32,
+        "average_found_char_style": false,
+        "global_pool": true,
+        "discriminator": "charCondAP",
+        "spacer": "duplicates",
+        "create_mask": true,
+        "mask_discriminator": "with derivitive"
+
+    }
+}

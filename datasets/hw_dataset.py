@@ -1,9 +1,3 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 import json
 
 import torch
@@ -17,8 +11,8 @@ import numpy as np
 import math
 
 from utils import grid_distortion
-
-from utils import string_utils, augmentation
+from utils.util import ensure_dir
+from utils import string_utils, augmentation, normalize_line
 from utils.parseIAM import getLineBoundaries as parseXML
 
 import random
@@ -94,7 +88,12 @@ class HWDataset(Dataset):
         with open(char_set_path) as f:
             char_set = json.load(f)
         self.char_to_idx = char_set['char_to_idx']
+
         self.augmentation = config['augmentation'] if 'augmentation' in config else None
+        self.normalized_dir = config['cache_normalized'] if 'cache_normalized' in config else None
+        if self.normalized_dir is not None:
+            ensure_dir(self.normalized_dir)
+
         self.warning=False
 
         #DEBUG
@@ -103,7 +102,7 @@ class HWDataset(Dataset):
 
         self.center = config['center_pad'] #if 'center_pad' in config else True
 
-
+        self.add_spaces = config['add_spaces'] if 'add_spces' in config else False
 
     def __len__(self):
         return len(self.lineIndex)
@@ -112,7 +111,14 @@ class HWDataset(Dataset):
 
         author,line = self.lineIndex[idx]
         img_path, lb, gt = self.authors[author][line]
-        img = cv2.imread(img_path,0)[lb[0]:lb[1],lb[2]:lb[3]] #read as grayscale, crop line
+        if self.add_spaces:
+            gt = ' '+gt+' '
+        if type(self.augmentation) is str and 'normalization' in  self.augmentation and self.normalized_dir is not None and os.path.exists(os.path.join(self.normalized_dir,'{}_{}.png'.format(author,line))):
+            img = cv2.imread(os.path.join(self.normalized_dir,'{}_{}.png'.format(author,line)),0)
+            readNorm=True
+        else:
+            img = cv2.imread(img_path,0)[lb[0]:lb[1],lb[2]:lb[3]] #read as grayscale, crop line
+            readNorm=False
 
         if img is None:
             return None
@@ -129,10 +135,23 @@ class HWDataset(Dataset):
 
         if len(img.shape)==2:
             img = img[...,None]
-        if self.augmentation is not None:
+        if type(self.augmentation) is str and 'normalization' in  self.augmentation and not readNorm:
+            img = normalize_line.deskew(img)
+            img = normalize_line.skeletonize(img)
+            if self.normalized_dir is not None:
+                cv2.imwrite(os.path.join(self.normalized_dir,'{}_{}.png'.format(author,line)),img)
+        elif self.augmentation is not None and (type(self.augmentation) is not str or 'warp' in self.augmentation):
             #img = augmentation.apply_random_color_rotation(img)
-            img = augmentation.apply_tensmeyer_brightness(img)
-            img = grid_distortion.warp_image(img)
+            if type(self.augmentation) is str and "low" in self.augmentation:
+                if random.random()>0.1:
+                    img = augmentation.apply_tensmeyer_brightness(img)
+                if random.random()>0.01:
+                    img = grid_distortion.warp_image(img,w_mesh_std=0.7,h_mesh_std=0.7)
+            else:
+                img = augmentation.apply_tensmeyer_brightness(img)
+                img = grid_distortion.warp_image(img)
+        if len(img.shape)==2:
+            img = img[...,None]
 
         img = img.astype(np.float32)
         img = 1.0 - img / 128.0

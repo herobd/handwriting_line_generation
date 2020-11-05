@@ -1,0 +1,152 @@
+{
+    "name": "singlefont_tiny_balPrsrvFx_condDiscAPActuallyStr_noBG_percept2tightWithAutoSplit_aug",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "SynthTextDataset",
+
+        "Xdata_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",
+	"data_dir": "../data/synthText/",
+        "fontdir": "../data/fonts/single_font",
+        "textdir": "../data/",
+        "batch_size": 4,
+        "a_batch_size": 1,
+        "shuffle": true,
+        "num_workers": 1,
+
+        "img_height": 64,
+        "char_file": "../data/english_char_set.json",
+        "mask_post": ["thresh","dilateCircle","errodeCircle"],
+        "mask_random": false,
+        "use_fg_mask": true,
+        "include_stroke_aug": true,
+        "augmentation": "affine",
+        "refresh_self": true,
+        "set_size": 20000,
+        "use_before_refresh": 5
+    },
+    "validation": {
+        "batch_size":1
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.00001,
+        "weight_decay": 0,
+        "betas": [0.5,0.99]
+    },
+    "optimizer_type_discriminator": "Adam",
+    "optimizer_discriminator": {
+        "lr": 0.00001,
+        "weight_decay": 0,
+        "betas": [0,0.9]
+    },
+    "loss": {
+        "auto": "pyramidL1Loss",
+        "key": "pushMinDist",
+        "count": "MSELoss",
+        "mask": "HingeLoss",
+        "perceptual": "L1Loss",
+        "genRecog": "CTCLoss",
+        "genAutoStyle": "L1Loss"
+    },
+    "loss_weights": {
+        "auto": 0.1,
+        "perceptual": 0.001,
+        "discriminator": 1,
+        "generator": 0.1,
+        "key": 0.001,
+        "count": 0.1,
+        "mask": 0.1,
+        "mask_generator": 0.01,
+        "mask_discriminator": 0.01,
+        "genRecog": 0.0001,
+        "style_discriminator": 0.1,
+        "style_generator": 0.01,
+        "genAutoStyle": 0.01
+
+    },
+    "loss_params":
+        {
+            "auto": {"weights":[0.5,0.3,0.2],
+                                "pool": "avg"},
+            "key": {"dist":"l1",
+                    "thresh": 1.0},
+            "mask": {"threshold": 4}
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 700000,
+        "save_dir": "saved/",
+        "val_step": -9999999999999,
+        "save_step": 25000,
+        "save_step_minor": 250,
+        "log_step": 100,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "space_input": true,
+        "style_together": true,
+        "use_hwr_pred_for_style": true,
+        "hwr_without_style":true,
+        "slow_param_names": ["keys"],
+        "curriculum": {
+            "0": [["auto"],["auto","split-style"],["sample-disc"]],
+            "200": [["auto", "auto-gen"],["auto","split-style"],[2,"sample-disc"]],
+            "5000": [["count","mask","gt_spaced","mask-gen"],["mask-disc"]],
+            "5900": [["auto"],["count","mask","mask-gen"]],
+            "6000": [  ["count","mask","mask-gen"],
+                        ["auto","auto-gen"],
+                        ["count","mask","mask-gen"],
+                        ["auto","auto-mask","auto-gen"],
+                        ["count","mask","mask-gen"],
+                        ["auto","split-style"],
+                        [2,"sample-disc","mask-disc"],
+                        [2,"gen","gen-auto-style"],
+                        [2,"sample-disc","mask-disc"],
+                        ["auto","split-style"],
+                        ["sample-disc","mask-disc"]]
+        },
+        "balance_loss": "sign_preserve_fixed",
+        "interpolate_gen_styles": "extra-0.25",
+
+	"text_data": "../data/english_text.txt",
+
+        "use_learning_schedule": false,
+        "no_bg_loss": true,
+        "encoder_weights": "saved/IAM_auto_2tight/checkpoint-iteration50000.pth",
+        "encoder_type": "2tight"
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 131,
+        "generator": "SpacedWithMask",
+        "gen_dim": 64,
+        "gen_n_res1": 1,
+        "gen_n_res2": 2,
+        "gen_n_res3": 1,
+        "gen_use_skips": true,
+        "dist_map_text_for_gen": false,
+	"hwr": "CRNN_batch_norm_softmax",
+        "pretrained_hwr": "../saved/singlefont_ocr_softmax_aug/checkpoint-iteration2000.pth",
+        "hwr_frozen": true,
+        "style": "new",
+        "style_norm":"group",
+        "style_activ":"relu",
+        "style_dim": 64,
+        "num_keys": 16,
+        "global_pool": true,
+        "discriminator": "condAP wide",
+        "spacer": "duplicates",
+        "create_mask": true,
+        "mask_discriminator": "with derivitive"
+
+    }
+}

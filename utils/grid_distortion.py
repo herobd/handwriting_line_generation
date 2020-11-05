@@ -1,9 +1,3 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 import cv2
 import numpy as np
 from scipy.interpolate import griddata
@@ -15,6 +9,8 @@ INTERPOLATION = {
 }
 
 def warp_image(img, random_state=None, **kwargs):
+    if img.shape[0]<=5 or img.shape[1]<=5:
+        return img
     if random_state is None:
         random_state = np.random.RandomState()
 
@@ -64,7 +60,8 @@ def warp_image(img, random_state=None, **kwargs):
     grid_z = griddata(destination, source, (grid_x, grid_y), method=interpolation_method).astype(np.float32)
     map_x = grid_z[:,:,1]
     map_y = grid_z[:,:,0]
-    warped = cv2.remap(img, map_x, map_y, INTERPOLATION[interpolation_method], borderValue=(255,255,255))
+    meanV = img.mean()
+    warped = cv2.remap(img, map_x, map_y, INTERPOLATION[interpolation_method], borderValue=(meanV,meanV,meanV))
 
     return warped
 

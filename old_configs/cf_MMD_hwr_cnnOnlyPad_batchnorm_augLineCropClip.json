@@ -1,0 +1,70 @@
+{
+    "name": "MMD_hwr_cnnOnlyPad_batchnorm_augLineCropClip",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "MMDHWDataset",
+
+        "Xdata_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",
+        "data_dir": "../data/mmd/",
+        "batch_size": 16,
+        "shuffle": true,
+        "num_workers": 0,
+        "Xnum_workers": 6,
+
+        "augmentation": "warp lines crop clip",
+        "img_height": 32,
+        "max_width": 3000,
+        "char_file": "./data/IAM_char_set.json",
+        "center_pad": false
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 32
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.001,
+        "weight_decay": 0
+    },
+    "loss": {
+        "recog": "CTCLoss"
+    },
+    "loss_weights": {
+        "recog": 1
+    },
+    "loss_params": 
+        {
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 800000,
+        "save_dir": "saved/",
+        "val_step": 10000,
+        "save_step": 25000,
+        "save_step_minor": 250,
+        "log_step": 100,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "skip_auto": true,
+
+
+        "use_learning_schedule": "rampup"
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 80,
+        "hwr": "CNNOnly batchnorm small pad",
+        "generator": "none",
+        "style": "none"
+    }
+}

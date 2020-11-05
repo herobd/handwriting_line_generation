@@ -1,0 +1,68 @@
+{
+    "name": "RIMESLines_hwr_cnnOnly_batchnorm_aug",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "AuthorRIMESLinesDataset",
+
+        "data_dir": "../data/RIMES/",
+        "batch_size": 16,
+        "a_batch_size": 1,
+        "shuffle": true,
+        "num_workers": 6,
+
+        "augmentation": "warp",
+        "img_height": 64,
+        "char_file": "../data/RIMES/characterset_lines.json",
+        "center_pad": false
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 48
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.001,
+        "weight_decay": 0
+    },
+    "loss": {
+        "recog": "CTCLoss"
+    },
+    "loss_weights": {
+        "recog": 1
+    },
+    "loss_params": 
+        {
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 500000,
+        "save_dir": "../saved/",
+        "val_step": 12500,
+        "save_step": 25000,
+        "save_step_minor": 250,
+        "log_step": 100,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "skip_auto": true,
+
+
+        "use_learning_schedule": false
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 78,
+        "hwr": "CNNOnly batchnorm",
+        "generator": "none",
+        "style": "none"
+    }
+}

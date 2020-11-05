@@ -1,9 +1,4 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
+#Curtis's code to clear the weight gradients in a module at a specific point in the computation graph (where the data flows through this module)
 import torch
   
 class ClearGrad(torch.nn.Module):

@@ -1,16 +1,9 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
-
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 #import seaborn as sns
 import umap
-import pickle, sys
+import pickle, sys, math
 from collections import defaultdict
 
 #sns.set(style='white', context='poster', rc={'figure.figsize':(14,10)})
@@ -31,7 +24,8 @@ author_d=defaultdict(list)
 
 def dist(vA,vB):
     #return np.dot(vA, vB) / (np.sqrt(np.dot(vA,vA)) * np.sqrt(np.dot(vB,vB)))
-    return np.abs(vA-vB).sum()
+    #return np.abs(vA-vB).sum()
+    return math.sqrt(np.power(vA-vB,2).sum())
 
 for i in range(len(authors)):
     for j in range(i+1,len(authors)):
@@ -41,6 +35,11 @@ for i in range(len(authors)):
         else:
             intra_author_dist.append(d)
         author_d[(i,j)].append(d)
+print('inter dist mean: {}, stddev: {}'.format(np.mean(inter_author_dist),np.std(inter_author_dist)))
+print('intra dist mean: {}, stddev: {}'.format(np.mean(intra_author_dist),np.std(intra_author_dist)))
+
+exit()
+
 author_mean=np.zeros((len(authors),len(authors)))
 author_std=np.zeros((len(authors),len(authors)))
 
@@ -53,8 +52,6 @@ for pair,l in author_d.items():
     author_std[a1,a2]=s
     author_std[a2,a1]=s
 
-print('inter dist mean: {}, stddev: {}'.format(np.mean(inter_author_dist),np.std(inter_author_dist)))
-print('intra dist mean: {}, stddev: {}'.format(np.mean(intra_author_dist),np.std(intra_author_dist)))
 
 cmap=plt.cm.Blues
 

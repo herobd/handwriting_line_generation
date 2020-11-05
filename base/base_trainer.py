@@ -1,9 +1,3 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 import os
 import math
 import json, copy
@@ -24,8 +18,8 @@ class BaseTrainer:
     """
     def __init__(self, model, loss, metrics, resume, config, train_logger=None):
         self.config = config
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.model = model
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.loss = loss
         self.metrics = metrics
         self.name = config['name']
@@ -56,21 +50,37 @@ class BaseTrainer:
             discriminator_params=[]
             gen_only_params=[]
             gen_only_slow_params=[]
+            style_ex_only_params=[]
+            style_ex_only_slow_params=[]
             slow_params=[]
             slow_param_names = config['trainer']['slow_param_names'] if 'slow_param_names' in config else []
+            freeze_param_names = config['trainer']['freeze_param_names'] if 'freeze_param_names' in config else []
             only_params = config['trainer']['only_params'] if 'only_params' in config['trainer'] else None
+            fix_author_classifer = config['model']['fix_author_classifer'] if 'fix_author_classifer' in config['model'] else (config['trainer']['fix_author_classifer'] if 'fix_author_classifer' in config['trainer'] else False)
             for name,param in model.named_parameters():
                 if only_params is None or any([p in name for p in only_params]):
                     goSlow=False
+                    freeze=False
                     for sp in slow_param_names:
                         if sp in name:
                             goSlow=True
-                    if 'discriminator' in name:
+                            break
+                    for fp in freeze_param_names:
+                        if fp in name:
+                            freeze=True
+                            break
+                    if freeze:
+                        pass
+                    elif 'discriminator' in name:
+                        discriminator_params.append(param)
+                    elif fix_author_classifer and 'author_classifier' in name:
                         discriminator_params.append(param)
                     elif goSlow or 'gen_deform' in name or 'conv_offset_mask' in name :
                         slow_params.append(param)
                         if 'generator' in name:
                             gen_only_params_slow.append(param)
+                        if 'style_extractor' in name:
+                            style_ex_only_params_slow.append(param)
                     elif ('hwr' in name and self.hwr_frozen) or ('style_extractor' in name and self.style_frozen):
                         pass
                     elif 'style_extractor' in name and self.curriculum.need_style_in_disc:
@@ -79,15 +89,23 @@ class BaseTrainer:
                         main_params.append(param)
                         if 'generator' in name:
                             gen_only_params.append(param)
+                        if 'style_extractor' in name:
+                            style_ex_only_params.append(param)
             to_opt = [{'params': main_params}, {'params': slow_params, 'lr': config['optimizer']['lr']*0.1}]
             self.optimizer = getattr(optim, config['optimizer_type'])(to_opt,
                                                                       **config['optimizer'])
             if len(discriminator_params)>0:
                 self.optimizer_discriminator = getattr(optim, config['optimizer_type_discriminator'])(discriminator_params,
                                                                       **config['optimizer_discriminator'])
+            else:
+                self.optimizer_discriminator = None
             if self.curriculum is not None and self.curriculum.need_sep_gen_opt:
                 to_opt = [{'params': gen_only_params}, {'params': gen_only_slow_params, 'lr': config['optimizer']['lr']*0.1}]
                 self.optimizer_gen_only = getattr(optim, config['optimizer_type'])(to_opt,
+                                                                          **config['optimizer'])
+            if self.curriculum is not None and self.curriculum.need_sep_style_ex_opt:
+                to_opt = [{'params': style_ex_only_params}, {'params': style_ex_only_slow_params, 'lr': config['optimizer']['lr']*0.1}]
+                self.optimizer_style_ex_only = getattr(optim, config['optimizer_type'])(to_opt,
                                                                           **config['optimizer'])
 
 
@@ -131,6 +149,10 @@ class BaseTrainer:
         elif self.useLearningSchedule=='detector':
             warmup_steps = config['trainer']['warmup_steps'] if 'warmup_steps' in config['trainer'] else 1000
             lr_lambda = lambda step_num: min((step_num+1)**-0.3, (step_num+1)*warmup_steps**-1.3)
+            self.lr_schedule = torch.optim.lr_scheduler.LambdaLR(self.optimizer,lr_lambda)
+        elif self.useLearningSchedule=='rampup':
+            warmup_steps = config['trainer']['warmup_steps'] if 'warmup_steps' in config['trainer'] else 1000
+            lr_lambda = lambda step_num: min(1,(step_num+0.001)/warmup_steps)
             self.lr_schedule = torch.optim.lr_scheduler.LambdaLR(self.optimizer,lr_lambda)
         elif self.useLearningSchedule is True:
             warmup_steps = config['trainer']['warmup_steps'] if 'warmup_steps' in config['trainer'] else 1000
@@ -184,7 +206,7 @@ class BaseTrainer:
 
         for self.iteration in range(self.start_iteration, self.iterations + 1):
             if not self.logged:
-                print('iteration: {}'.format(self.iteration), end='\r')
+                print('iteration: {}     '.format(self.iteration), end='\r')
 
             t = timeit.default_timer()
             result=None
@@ -248,11 +270,11 @@ class BaseTrainer:
                 self._minor_log(log)
                 for key in sumLog:
                     sumLog[key] =0
-                if self.iteration%self.val_step!=0: #we'll do it later if we have a validation pass
+                if self.iteration%self.val_step!=0 or self.val_step<0: #we'll do it later if we have a validation pass
                     self.train_logger.add_entry(log)
 
             #VALIDATION
-            if self.iteration%self.val_step==0:
+            if self.iteration%self.val_step==0 and self.val_step>0:
                 val_result = self._valid_epoch()
                 for key, value in val_result.items():
                     if 'metrics' in key:
@@ -408,6 +430,12 @@ class BaseTrainer:
                         del checkpoint['state_dict'][key]
             ##DEBUG
 
+            ##HACK fix
+            keys = list(checkpoint['state_dict'].keys())
+            for key in keys:
+                if 'style_from_normal' in key: #HACK
+                    del checkpoint['state_dict'][key]
+
             self.model.load_state_dict(checkpoint['state_dict'])
             if self.swa:
                 self.swa_model.load_state_dict(checkpoint['swa_state_dict'])
@@ -423,6 +451,29 @@ class BaseTrainer:
                 for k, v in state.items():
                     if isinstance(v, torch.Tensor):
                         state[k] = v.cuda(self.gpu)
+
+        if 'optimizer_discriminator' in checkpoint:
+            self.optimizer_discriminator.load_state_dict(checkpoint['optimizer_discriminator'])
+            if self.with_cuda:
+                for state in self.optimizer_discriminator.state.values():
+                    for k, v in state.items():
+                        if isinstance(v, torch.Tensor):
+                            state[k] = v.cuda(self.gpu)
+        if 'optimizer_gen_only' in checkpoint:
+            self.optimizer_gen_only.load_state_dict(checkpoint['optimizer_gen_only'])
+            if self.with_cuda:
+                for state in self.optimizer_gen_only.state.values():
+                    for k, v in state.items():
+                        if isinstance(v, torch.Tensor):
+                            state[k] = v.cuda(self.gpu)
+        if 'optimizer_style_ex_only' in checkpoint:
+            self.optimizer_style_ex_only.load_state_dict(checkpoint['optimizer_style_ex_only'])
+            if self.with_cuda:
+                for state in self.optimizer_style_ex_only.state.values():
+                    for k, v in state.items():
+                        if isinstance(v, torch.Tensor):
+                            state[k] = v.cuda(self.gpu)
+
         self.train_logger = checkpoint['logger']
         self.logger.info("Checkpoint '{}' (iteration {}) loaded".format(resume_path, self.start_iteration))
 

@@ -1,0 +1,89 @@
+{
+    "name": "singlefont_ocr_softmax_aug",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "FontDataset",
+
+        "data_dir": "../data/fonts/single_font",
+        "textdir": "../data/",
+        "batch_size": 32,
+        "shuffle": true,
+        "num_workers": 4,
+
+        "img_height": 64,
+
+        "augmentation": "warp",
+        "center_pad": false,
+        "char_file":"../data/english_char_set.json"
+    },
+
+    "validation": {
+        "shuffle": false,
+        "batch_size": 64
+    },
+    "synth_data": {
+        "data_set_name":"SynthTextDataset",
+        "data_dir": "../data/synthText/",
+        "fontdir": "../data/fonts/single_font",
+        "textdir": "../data/",
+        "batch_size": 32,
+        "num_workers": 4,
+        "max_len": 16,
+        "shuffle": true,
+        "augmentation": null,
+        "extrapolate": 0.25,
+        "set_size": 72000,
+        "gen_batch_size": 16,
+        "use_before_refresh": 5,
+        "char_file":"../data/english_char_set.json"
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.001,
+        "weight_decay": 0
+    },
+    "loss": {
+        "recog": "CTCLoss"
+    },
+    "loss_weights": {
+        "recog": 1
+    },
+    "loss_params": 
+        {
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWRWithSynthTrainer",
+        "iterations": 30000,
+        "save_dir": "../saved/",
+        "val_step": 1000,
+        "save_step": 5000,
+        "save_step_minor": 250,
+        "log_step": 100,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "skip_auto": true,
+
+
+        "use_learning_schedule": false,
+        "curriculum": {
+            "0": [ ["synth"] ]
+        }
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 131,
+        "hwr": "CRNN_batch_norm_softmax",
+        "generator": "none",
+        "style": "none"
+    }
+}

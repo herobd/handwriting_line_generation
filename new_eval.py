@@ -1,10 +1,3 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
-
 import os
 import json
 import logging
@@ -19,8 +12,14 @@ from data_loader import getDataLoader
 from evaluators import *
 import math
 from collections import defaultdict
-import pickle
-import requests
+import pickle, csv
+#import requests
+
+def update_status(name,message):
+    try:
+        r = requests.get('http://sensei-status.herokuapp.com/sensei-update/{}?message={}'.format(name,message))
+    except requests.exceptions.ConnectionError:
+        pass
 
 #from datasets.forms_detect import FormsDetect
 #from datasets import forms_detect
@@ -28,7 +27,9 @@ import requests
 logging.basicConfig(level=logging.INFO, format='')
 
 def save_style(location,volume,styles,authors,ids=None,doIds=False, spaced=None,strings=None,doSpaced=False):
-    styles = np.concatenate(styles,axis=0)
+    #styles = np.concatenate(styles,axis=0)
+    styles = torch.cat(styles,dim=0)
+    styles = styles.numpy()
     todump = {'styles':styles, 'authors':authors}
 
     if doIds:
@@ -45,22 +46,26 @@ def save_style(location,volume,styles,authors,ids=None,doIds=False, spaced=None,
 
 
 
-def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=None, config=None, thresh=None, addToConfig=None, test=False, toEval=None):
+def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=None, config=None, thresh=None, addToConfig=None, test=False, toEval=None, verbosity=2):
     np.random.seed(1234)
     torch.manual_seed(1234)
     if resume is not None:
         checkpoint = torch.load(resume, map_location=lambda storage, location: storage)
         print('loaded iteration {}'.format(checkpoint['iteration']))
+        loaded_iteration = checkpoint['iteration']
         if config is None:
             config = checkpoint['config']
         else:
             config = json.load(open(config))
         for key in config.keys():
-            if 'pretrained' in key:
-                config[key]=None
+            if type(config[key]) is dict:
+                for key2 in config[key].keys():
+                    if key2.startswith('pretrained'):
+                        config[key][key2]=None
     else:
         checkpoint = None
         config = json.load(open(config))
+        loaded_iteration = None
     config['optimizer_type']="none"
     config['trainer']['use_learning_schedule']=False
     config['trainer']['swa']=False
@@ -104,6 +109,10 @@ def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=N
     if 'save_spaced' in config:
         spaced={}
         spaced_val={}
+        if toEval is None:
+            toEval=['spaced_label']
+        elif 'spaced_label' not in toEval:
+            toEval.append('spaced_label')
         config['data_loader']['batch_size']=1
         config['validation']['batch_size']=1
         if 'a_batch_size' in config['data_loader']:
@@ -146,24 +155,23 @@ def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=N
     if checkpoint is not None:
         if 'state_dict' in checkpoint:
             model = eval(config['arch'])(config['model'])
+            if config['trainer']['class']=='HWRWithSynthTrainer':
+                model = model.hwr
             if 'style' in config['model'] and 'lookup' in config['model']['style']:
                 model.style_extractor.add_authors(data_loader.dataset.authors) ##HERE
-            ##DEBUG
-            if 'edgeFeaturizerConv.0.0.weight' in checkpoint['state_dict']:
-                keys = list(checkpoint['state_dict'].keys())
-                for key in keys:
-                    if 'edge' in key:
-                        newKey = key.replace('edge','rel')
-                        checkpoint['state_dict'][newKey] = checkpoint['state_dict'][key]
-                        del checkpoint['state_dict'][key]
-            ##DEBUG
+            ##HACK fix
+            keys = list(checkpoint['state_dict'].keys())
+            for key in keys:
+                if 'style_from_normal' in key: #HACK
+                    del checkpoint['state_dict'][key]
             model.load_state_dict(checkpoint['state_dict'])
         else:
             model = checkpoint['model']
     else:
         model = eval(config['arch'])(config['model'])
     model.eval()
-    model.summary()
+    if verbosity>1:
+        model.summary()
 
     if type(config['loss'])==dict: 
         loss={}#[eval(l) for l in config['loss']]
@@ -191,7 +199,8 @@ def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=N
     #print(len(data_loader))
     if data_loader is not None:
         train_iter = iter(data_loader)
-    valid_iter = iter(valid_data_loader)
+    if valid_data_loader is not None:
+        valid_iter = iter(valid_data_loader)
 
     with torch.no_grad():
 
@@ -205,6 +214,10 @@ def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=N
                     os.mkdir(trainDir)
                 if not os.path.isdir(validDir):
                     os.mkdir(validDir)
+
+                if loaded_iteration is not None:
+                    with open(os.path.join(validDir,'z_iter_{}.txt'.format(loaded_iteration)),'w') as f:
+                        f.write('{}'.format(loaded_iteration))
             else:
                 trainDir=None
                 validDir=None
@@ -259,6 +272,7 @@ def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=N
                 authorsVal=[]
                 spacedVal=[]
                 stringsVal=[]
+                spaced=[]
                 
                 doIds = config['data_loader']['data_set_name']=='StyleWordDataset'
                 #doSpaced = not doIds#?
@@ -278,19 +292,25 @@ def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=N
                 else:
                     saveStyleValLoc = 'val_'+saveStyleLoc
 
+            if 'save_preds' in config:
+                to_save=[]
+
             validName='valid' if not test else 'test'
 
             startBatch = config['startBatch'] if 'startBatch' in config else 0
             numberOfBatches = numberOfImages//batchSize
+            if numberOfBatches==0 and numberOfImages>1:
+                numberOfBatches=1
 
             #for index in range(startIndex,numberOfImages,step*batchSize):
             batch = startBatch
+            numberOfBatches = min(numberOfBatches,max(len(valid_data_loader),len(data_loader)))
             for batch in range(startBatch,numberOfBatches):
             
                 #for validIndex in range(index,index+step*vBatchSize, vBatchSize):
                 #for validBatch
                     #if valyypidIndex/vBatchSize < len(valid_data_loader):
-                if batch < len(valid_data_loader):
+                if valid_data_loader is not None and batch < len(valid_data_loader) and 'skip_valid' not in config:
                         print('{} batch index: {}/{}       '.format(validName,batch,len(valid_data_loader)),end='\r')
                         #data, target = valid_iter.next() #valid_data_loader[validIndex]
                         #dataT  = _to_tensor(gpu,data)
@@ -313,10 +333,10 @@ def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=N
                         else:
                             val_metrics_sum += metricsO.sum(axis=0)/metricsO.shape[0]
                         if 'save_spaced' in config:
-                            spaced_val[aux['name'][0]] = aux['spaced_label'].cpu().numpy()
+                            spaced_val[aux['name'][0]] = aux['spaced_label'].cpu()
                         if 'save_style' in config:
-                            stylesVal.append(aux['style'])
-                            authorsVal+=aux['authors']
+                            stylesVal.append(aux['style'].cpu())
+                            authorsVal+=aux['author']
                             if doIds:
                                 idsVal+=aux['name']
                             elif doSpaced:
@@ -332,7 +352,7 @@ def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=N
                                 stringsVal=[]
                             
                     
-                if not test:
+                if not test and 'skip_train' not in config:
                     #for trainIndex in range(index,index+step*batchSize, batchSize):
                     #    if trainIndex/batchSize < len(data_loader):
                     if batch < len(data_loader):
@@ -344,13 +364,14 @@ def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=N
                             #output = output.cpu().data.numpy()
                             #target = target.data.numpy()
                             #metricsO = _eval_metrics_ind(metrics,output, target)
-                            _,aux=saveFunc(config,train_iter.next(),trainer,metrics,trainDir,batch*batchSize,toEval=toEval)
+                            instance = train_iter.next()
+                            _,aux=saveFunc(config,instance,trainer,metrics,trainDir,batch*batchSize,toEval=toEval)
                             if 'save_nns' in config:
                                 nns+=aux[-1]
                             if 'save_spaced' in config:
-                                spaced[aux['name'][0]] = aux['spaced_label'].cpu().numpy()
+                                spaced[aux['name'][0]] = aux['spaced_label'].cpu()
                             if 'save_style' in config:
-                                styles.append(aux['style'])
+                                styles.append(aux['style'].cpu())
                                 authors+=aux['author']
                                 if doIds:
                                     ids+=aux['name']
@@ -365,48 +386,62 @@ def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=N
                                     ids=[]
                                     spaced=[]
                                     strings=[]
+                            if 'save_preds' in config:
+                                for b in range(batchSize):
+                                    try:
+                                        to_save.append([instance['name'][b],instance['gt'][b],aux['pred_str'][b],aux['cer'][b]])
+                                    except IndexError:
+                                        pass
 
             #if gpu is not None or numberOfImages==0:
-            try:
-                for vi in range(batch,len(valid_data_loader)):
-                    print('{} batch index: {}\{} (not save)   '.format(validName,vi,len(valid_data_loader)),end='\r')
-                    instance = valid_iter.next()
-                    metricsO,aux = saveFunc(config,instance,trainer,metrics,toEval=toEval)
-                    if type(metricsO) == dict:
-                        for typ,typeLists in metricsO.items():
-                            if type(typeLists) == dict:
-                                for name,lst in typeLists.items():
-                                    val_metrics_list[typ][name]+=lst
-                                    val_comb_metrics[typ]+=lst
+            if 'save_preds' in config:
+                with open(config['save_preds'],'w') as f:
+                    csvwriter=csv.writer(f, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                    for l in to_save:
+                        csvwriter.writerow(l)
+                print('wrote results to {}'.format(config['save_preds']))
+            if saveDir is None:
+                try:
+                    if valid_data_loader is not None:
+                        for vi in range(batch,len(valid_data_loader)):
+                            #print('{} batch index: {}\{} (not save)   '.format(validName,vi,len(valid_data_loader)),end='\r')
+                            instance = valid_iter.next()
+                            metricsO,aux = saveFunc(config,instance,trainer,metrics,toEval=toEval)
+                            if type(metricsO) == dict:
+                                for typ,typeLists in metricsO.items():
+                                    if type(typeLists) == dict:
+                                        for name,lst in typeLists.items():
+                                            val_metrics_list[typ][name]+=lst
+                                            val_comb_metrics[typ]+=lst
+                                    else:
+                                        if type(typeLists) is float or type(typeLists) is int:
+                                            typeLists = [typeLists]
+                                        val_comb_metrics[typ]+=typeLists
                             else:
-                                if type(typeLists) is float or type(typeLists) is int:
-                                    typeLists = [typeLists]
-                                val_comb_metrics[typ]+=typeLists
-                    else:
-                        val_metrics_sum += metricsO.sum(axis=0)/metricsO.shape[0]
-                    if 'save_spaced' in config:
-                        spaced_val[aux['name'][0]] = aux['spaced_label'].cpu().numpy()
-                    if 'save_style' in config:
-                        stylesVal.append(aux['style'])
-                        authorsVal+=aux['author']
-                        if doIds:
-                            idsVal+=aux['name']
-                        elif doSpaced:
-                            #spacedVal.append(aux[2])
-                            spacedVal+=aux['spaced_label']
-                            stringsVal+=aux['gt']
-                        if vi>0 and vi%saveStyleEvery==0:
-                            save_style(saveStyleValLoc,vi,stylesVal,authorsVal,idsVal,doIds,spacedVal,stringsVal,doSpaced)
-                            stylesVal=[]
-                            authorsVal=[]
-                            idsVal=[]
-                            spacedVal=[]
-                            stringsVal=[]
-            except StopIteration:
-                print('ERROR: ran out of valid batches early. Expected {} more'.format(len(valid_data_loader)-vi))
+                                val_metrics_sum += metricsO.sum(axis=0)/metricsO.shape[0]
+                            if 'save_spaced' in config:
+                                spaced_val[aux['name'][0]] = aux['spaced_label'].cpu()
+                            if 'save_style' in config:
+                                stylesVal.append(aux['style'].cpu())
+                                authorsVal+=aux['author']
+                                if doIds:
+                                    idsVal+=aux['name']
+                                elif doSpaced:
+                                    #spacedVal.append(aux[2])
+                                    spacedVal+=aux['spaced_label']
+                                    stringsVal+=aux['gt']
+                                if vi>0 and vi%saveStyleEvery==0:
+                                    save_style(saveStyleValLoc,vi,stylesVal,authorsVal,idsVal,doIds,spacedVal,stringsVal,doSpaced)
+                                    stylesVal=[]
+                                    authorsVal=[]
+                                    idsVal=[]
+                                    spacedVal=[]
+                                    stringsVal=[]
+                except StopIteration:
+                    print('ERROR: ran out of valid batches early. Expected {} more'.format(len(valid_data_loader)-vi))
             ####
-                
-            val_metrics_sum /= len(valid_data_loader)
+            if valid_data_loader is not None:   
+                val_metrics_sum /= len(valid_data_loader)
             print('{} metrics'.format(validName))
             for i in range(len(metrics)):
                 print(metrics[i].__name__ + ': '+str(val_metrics_sum[i]))
@@ -435,6 +470,7 @@ def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=N
 
             if 'save_style' in config:
                 if len(styles)>0:
+                    assert(not doSpaced)
                     save_style(saveStyleLoc,len(data_loader),styles,authors,ids,doIds)
                 if len(stylesVal)>0:
                     save_style(saveStyleValLoc,len(valid_data_loader),stylesVal,authorsVal,idsVal,doIds)
@@ -491,6 +527,8 @@ if __name__ == '__main__':
                         help='gpu number (default: cpu only)')
     parser.add_argument('-b', '--batchsize', default=None, type=int,
                         help='gpu number (default: cpu only)')
+    parser.add_argument('-v', '--verbosity', default=2, type=int,
+                        help='0,1,2')
     parser.add_argument('-s', '--shuffle', default=False, type=bool,
                         help='shuffle data')
     parser.add_argument('-f', '--config', default=None, type=str,
@@ -532,6 +570,7 @@ if __name__ == '__main__':
         index = args.imgname
     if len(args.notify)>0:
         name = args.notify
+        update_status(name,'started')
     #toEval = args.spcial_eval if args.spcial_eval is not None else args.eval
     if args.eval is not None and args.eval[0]=='[':
         assert(args.eval[-1]==']')
@@ -542,10 +581,13 @@ if __name__ == '__main__':
     try:
         if args.gpu is not None:
             with torch.cuda.device(args.gpu):
-                main(args.checkpoint, args.savedir, args.number, index, gpu=args.gpu, shuffle=args.shuffle, setBatch=args.batchsize, config=args.config, thresh=args.thresh, addToConfig=addtoconfig,test=args.test,toEval=toEval)
+                main(args.checkpoint, args.savedir, args.number, index, gpu=args.gpu, shuffle=args.shuffle, setBatch=args.batchsize, config=args.config, thresh=args.thresh, addToConfig=addtoconfig,test=args.test,toEval=toEval,verbosity=args.verbosity)
         else:
-            main(args.checkpoint, args.savedir, args.number, index, gpu=args.gpu, shuffle=args.shuffle, setBatch=args.batchsize, config=args.config, thresh=args.thresh, addToConfig=addtoconfig,test=args.test,toEval=toEval)
+            main(args.checkpoint, args.savedir, args.number, index, gpu=args.gpu, shuffle=args.shuffle, setBatch=args.batchsize, config=args.config, thresh=args.thresh, addToConfig=addtoconfig,test=args.test,toEval=toEval,verbosity=args.verbosity)
     except Exception as er:
+        if len(args.notify)>0:
+            update_status(name,er)
         raise er
     else:
-        pass
+        if len(args.notify)>0:
+            update_status(name,'DONE!')

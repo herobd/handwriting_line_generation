@@ -1,0 +1,65 @@
+{
+    "name": "IAM_auto_2tight_newCTC",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer": false,
+    "data_loader": {
+        "data_set_name": "AuthorHWDataset",
+        "data_dir": "../data/IAM/",
+        "batch_size": 28,
+        "a_batch_size": 1,
+        "shuffle": false,
+        "num_workers": 2,
+        "img_height": 64,
+        "max_width": 1300,
+        "char_file": "./data/IAM_char_set.json"
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 64
+    },
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.0002,
+        "weight_decay": 0,
+        "betas": [
+            0.5,
+            0.999
+        ]
+    },
+    "loss": {
+        "auto": "L1Loss",
+        "recog": "CTCLoss"
+    },
+    "loss_weights": {
+        "auto": 1,
+        "recog": 1
+    },
+    "loss_params": {
+    },
+    "metrics": [],
+    "trainer": {
+        "class": "AutoTrainer",
+        "iterations": 60000,
+        "save_dir": "saved/",
+        "val_step": 5000,
+        "save_step": 10000,
+        "save_step_minor": 250,
+        "log_step": 250,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "slow_param_names": [
+            "keys"
+        ],
+        "use_learning_schedule": false,
+        "swa": false
+    },
+    "arch": "Autoencoder",
+    "model": {
+        "type": "2tight",
+        "hwr": 80
+    }
+}

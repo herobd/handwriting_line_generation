@@ -1,18 +1,20 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 import torch
 from torch import nn
 from .net_builder import getGroupSize
-
+from .grcl import NewGRCL
 
 class CNNOnlyHWR(nn.Module):
 
-    def __init__(self, nclass, nc=1, cnnOutSize=512, nh=512, leakyRelu=False, norm='group'):
+    def __init__(self, nclass, nc=1, cnnOutSize=512, nh=512, leakyRelu=False, norm='group', useGRCL=False, small=False, pad=False):
         super(CNNOnlyHWR, self).__init__()
+        if pad=='less':
+            h = 32 if small else 64
+            self.pad=nn.ZeroPad2d((h,h,0,0))
+        elif pad:
+            h = 32 if small else 64
+            self.pad=nn.ZeroPad2d((h*2,h*2,0,0))
+        else:
+            self.pad=None
         # assert imgH % 16 == 0, 'imgH has to be a multiple of 16'
 
         ks = [3, 3, 3, 3, 3, 3, 3]
@@ -38,7 +40,8 @@ class CNNOnlyHWR(nn.Module):
                 cnn.add_module('relu{0}'.format(i), nn.ReLU(True))
 
         convRelu(0)
-        cnn.add_module('pooling{0}'.format(0), nn.MaxPool2d(2, 2))  # 64x32x12c
+        if not small:
+            cnn.add_module('pooling{0}'.format(0), nn.MaxPool2d(2, 2))  # 64x32x12c
         convRelu(1)
         cnn.add_module('pooling{0}'.format(1), nn.MaxPool2d(2, 2))  # 128x16x6c
         convRelu(2, norm)
@@ -53,7 +56,22 @@ class CNNOnlyHWR(nn.Module):
 
         self.cnn = cnn
         size1d=512
-        self.cnn1d = nn.Sequential(
+        if useGRCL:
+            self.cnn1d = nn.Sequential(
+                            NewGRCL(512,512,3,T=1,inL=True),
+                            NewGRCL(512,512,3,T=1),
+                            nn.ReLU6(True),
+                            NewGRCL(512,256,5,T=1,inL=True),
+                            NewGRCL(256,256,5,T=1),
+                            nn.ReLU6(True),
+                            NewGRCL(256,128,7,T=1,inL=True),
+                            NewGRCL(128,128,7,T=1),
+                            nn.ReLU6(True),
+                            nn.Conv1d(128,nclass,1),
+                            nn.LogSoftmax(dim=1)
+                        )
+        elif norm=='group':
+            self.cnn1d = nn.Sequential(
                         nn.Conv1d(size1d,size1d,3,1,2,2),
                         nn.GroupNorm(getGroupSize(size1d),size1d),
                         nn.ReLU(True),
@@ -78,9 +96,37 @@ class CNNOnlyHWR(nn.Module):
                         nn.Conv1d(size1d,nclass,3,1,0,1),
                         nn.LogSoftmax(dim=1)
                         )
+        else:
+            self.cnn1d = nn.Sequential(
+                        nn.Conv1d(size1d,size1d,3,1,2,2),
+                        nn.BatchNorm1d(size1d),
+                        nn.ReLU(True),
+                        #nn.Conv1d(size1d,size1d,3,1,0,1),
+                        #nn.BatchNorm1d(size1d),
+                        #nn.ReLU(True),
+                        nn.Conv1d(size1d,size1d,3,1,4,4),
+                        nn.BatchNorm1d(size1d),
+                        nn.ReLU(True),
+                        nn.Conv1d(size1d,size1d,3,1,0,1),
+                        nn.BatchNorm1d(size1d),
+                        nn.ReLU(True),
+                        nn.Conv1d(size1d,size1d,3,1,8,8),
+                        nn.BatchNorm1d(size1d),
+                        nn.ReLU(True),
+                        #nn.Conv1d(size1d,size1d,3,1,0,1),
+                        #nn.BatchNorm1d(size1d),
+                        #nn.ReLU(True),
+                        #nn.Conv1d(size1d,size1d,3,1,16,16),
+                        #nn.BatchNorm1d(size1d),
+                        #nn.ReLU(True),
+                        nn.Conv1d(size1d,nclass,3,1,0,1),
+                        nn.LogSoftmax(dim=1)
+                        )
 
 
     def forward(self, input, style=None):
+        if self.pad is not None:
+            input=self.pad(input)
         # conv features
         conv = self.cnn(input)
         b, c, h, w = conv.size()
@@ -92,7 +138,7 @@ class CNNOnlyHWR(nn.Module):
         return output
 
     def setup_save_features(self):
-        save_from = [12]
+        save_from = [15]
         self.saved_features = [None]*len(save_from)
         def factorySave(i):
             def saveX(module, input ,output):

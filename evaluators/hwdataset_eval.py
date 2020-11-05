@@ -1,9 +1,3 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 #from skimage import color, io
 import os
 import numpy as np
@@ -12,10 +6,12 @@ import cv2
 from utils import util
 import math
 from model.loss import *
+from model.hw_with_style import correct_pred
 from collections import defaultdict
 import json
 from utils import util, string_utils, error_rates
 from datasets.hw_dataset import PADDING_CONSTANT
+from trainer import *
 
 #THRESH=0.5
 
@@ -49,27 +45,38 @@ def HWDataset_eval(config,instance, trainer, metrics, outDir=None, startIndex=No
             for i, metric in enumerate(metrics):
                 acc_metrics[ind,i] += metric(output[ind:ind+1], target[ind:ind+1])
         return acc_metrics
+    
+    if type(trainer) is HWRWithSynthTrainer:
+        pred, losses = trainer.run(instance)
+        out={'pred':pred}
+    elif type(trainer) is AutoTrainer:
+        losses, out = trainer.run_gen(instance,toEval)
+    else:#if type(trainer) is HWWithStyleTrainer:
+        if toEval is None:
 
-    if toEval is None:
-
-        pred, recon, losses, style, spaced = trainer.run(instance,get_style=True)
-        toEval = ['pred','recon','style','spaced']
-        out['pred']=pred
-        out['recon']=recon
-        out['style']=style
-        out['spaced']=spaced
-    elif type(toEval) is list:
-        losses, out = trainer.run_gen(instance,trainer.curriculum.getEval(),toEval)
-    else:
-        if toEval=='spaced':
-            justSpaced(trainer.model,instance,trainer.gpu if trainer.with_cuda else None)
-        if toEval=='spacing':
-            justSpacing(trainer.model,instance,trainer.gpu if trainer.with_cuda else None)
-        elif toEval=='mask':
-            justMask(trainer.model,instance,trainer.gpu if trainer.with_cuda else None)
+            pred, recon, losses, style, spaced = trainer.run(instance,get_style=True)
+            toEval = ['pred','recon','style','spaced']
+            out={}
+            if pred is not None:
+                out['pred']=pred
+            if recon is not None:
+                out['recon']=recon
+            if style is not None:
+                out['style']=style
+            if spaced is not None:
+                out['spaced']=spaced
+        elif type(toEval) is list:
+            losses, out = trainer.run_gen(instance,trainer.curriculum.getEval(),toEval)
         else:
-            raise ValueError('unkwon just: {}'.format(toEval))
-        return {}, (None,)
+            if toEval=='spaced':
+                justSpaced(trainer.model,instance,trainer.gpu if trainer.with_cuda else None)
+            if toEval=='spacing':
+                justSpacing(trainer.model,instance,trainer.gpu if trainer.with_cuda else None)
+            elif toEval=='mask':
+                justMask(trainer.model,instance,trainer.gpu if trainer.with_cuda else None)
+            else:
+                raise ValueError('unkwon just: {}'.format(toEval))
+            return {}, (None,)
 
 
     images = instance['image'].numpy()
@@ -78,10 +85,34 @@ def HWDataset_eval(config,instance, trainer, metrics, outDir=None, startIndex=No
     batchSize = len(gt)
     #style = style.cpu().detach().numpy()
     if 'pred' in out:
-        pred = out['pred'].cpu().detach().numpy()
-        sum_cer, pred_str, cer = trainer.getCER(gt,pred,individual=True)
+        pred = out['pred'].cpu().detach()
+        aligned1 = correct_pred(pred,instance['label'])
+        aligned=[]
+        for b in range(batchSize):
+            #a, raw_aligned = string_utils.naive_decode(aligned1[:,b])
+            a = []
+            for i in range(len(aligned1[:,b])):
+                if aligned1[i,b] != 0 and not ( i > 0 and aligned1[i,b] == aligned1[i-1,b] ):
+                    a.append(aligned1[i,b].item())
+            aligned.append(string_utils.label2str_single(a, trainer.idx_to_char, False))
+        
+        pred = pred.numpy()
+        sum_cer,sum_wer, pred_str, cer = trainer.getCER(gt,pred,individual=True)
+        out['cer'] = cer
+        out['pred_str']=pred_str
+
+        for b in range(batchSize):
+            print('{} GT:      {}'.format(instance['name'][b],gt[b]))
+            print('{} aligned: {}'.format(instance['name'][b],aligned[b]))
+            print('{} pred:    {}'.format(instance['name'][b],pred_str[b]))
+            print(pred[:,b])
+        if 'by_author' in config:
+            by_author=defaultdict(list)
+            for b,author in enumerate(instance['author']):
+                by_author['cer_'+author].append(cer[b])
+    
     if outDir is not None:
-        for key_name in ['recon','recon_gt_mask']:
+        for key_name in ['recon','recon_gt_mask','recon_pred_space']:
             if key_name in out:# and 'pred' in out:
                 recon = out[key_name].cpu().detach().numpy()
                 if 'show_attention' in config:
@@ -110,25 +141,93 @@ def HWDataset_eval(config,instance, trainer, metrics, outDir=None, startIndex=No
                 for b in range(batchSize):
                     if 'cer_thresh' in config and cer[b]<config['cer_thresh']:
                         continue
+                    toColor=False
                     image = (1-((1+np.transpose(images[b][:,:,:],(1,2,0)))/2.0)).copy()
                     if recon is not None:
                         reconstructed = (1-((1+np.transpose(recon[b][:,:,:],(1,2,0)))/2.0)).copy()
-                        border = np.zeros((image.shape[0],5,image.shape[2]))
+                        #border = np.zeros((image.shape[0],5,image.shape[2]))
 
-                        bigPic = np.concatenate((image,border,reconstructed),axis=1)
+                        #bigPic = np.concatenate((image,border,reconstructed),axis=1)
+
+                        padded=None
+                        if reconstructed.shape[1]>image.shape[1]:
+                            #reconstructed=reconstructed[:,:image.shape[1]]
+                            dif = -(image.shape[1] -reconstructed.shape[1])
+                            image = np.pad(image,((0,0),(dif//2,dif//2+dif%2),(0,0)),mode='constant')
+                            padded='real'
+                        elif image.shape[1]>reconstructed.shape[1]: #pad
+                            dif = image.shape[1] -reconstructed.shape[1]
+                            reconstructed = np.pad(reconstructed,((0,0),(dif//2,dif//2+dif%2),(0,0)),mode='constant')
+                            padded='gen'
+                        border = np.zeros((2,image.shape[1],image.shape[2]))
+                        bigPic = np.concatenate((image,border,reconstructed),axis=0)
+
+                        #add color border for visibility in paper figures
+                        if bigPic.shape[2]==1 and True:
+                            bigPic*=255
+                            bigPic = bigPic.astype(np.uint8)
+                            bigPic = cv2.cvtColor(bigPic[:,:,0],cv2.COLOR_GRAY2RGB)
+                            toColor=True
+                            padReal=dif//2 if padded=='real' else 0
+                            padGen =dif//2 if padded=='gen' else 0
+                            #print('COLOR!')
+                            if padReal!=0:
+                                bigPic[0,padReal:-padReal,1]=255
+                                bigPic[image.shape[0],padReal:-padReal,1]=255
+                                bigPic[image.shape[0],padReal:-padReal,0]=0
+                                bigPic[0,padReal:-padReal,0]=0
+                                bigPic[0,padReal:-padReal,2]=0
+                                bigPic[image.shape[0],padReal:-padReal,2]=0
+                            else:
+                                bigPic[0,:,1]=255
+                                bigPic[image.shape[0],:,1]=255
+                                bigPic[image.shape[0],:,0]=0
+                                bigPic[0,:,0]=0
+                                bigPic[0,:,2]=0
+                                bigPic[image.shape[0],:,2]=0
+                            bigPic[:image.shape[0],padReal,1]=255
+                            bigPic[:image.shape[0],-1-padReal,1]=255
+                            bigPic[:image.shape[0],padReal,0]=0
+                            bigPic[:image.shape[0],-1-padReal,0]=0
+                            bigPic[:image.shape[0],padReal,2]=0
+                            bigPic[:image.shape[0],-1-padReal,2]=0
+
+
+                            if padGen != 0:
+                                bigPic[image.shape[0]+1,padGen:-padGen,0]=255
+                                bigPic[-1,padGen:-padGen,0]=255
+                                bigPic[image.shape[0]+1,padGen:-padGen,2]=0
+                                bigPic[-1,padGen:-padGen,2]=0
+                                bigPic[image.shape[0]+1,padGen:-padGen,1]=0
+                                bigPic[-1,padGen:-padGen,1]=0
+                            else:
+                                bigPic[image.shape[0]+1,:,0]=255
+                                bigPic[-1,:,0]=255
+                                bigPic[image.shape[0]+1,:,2]=0
+                                bigPic[-1,:,2]=0
+                                bigPic[image.shape[0]+1,:,1]=0
+                                bigPic[-1,:,1]=0
+
+                            bigPic[image.shape[0]+2:,padGen,0]=255
+                            bigPic[image.shape[0]+2:,-1-padGen,0]=255
+                            bigPic[image.shape[0]+2:,padGen,2]=0
+                            bigPic[image.shape[0]+2:,-1-padGen,2]=0
+                            bigPic[image.shape[0]+2:,padGen,1]=0
+                            bigPic[image.shape[0]+2:,-1-padGen,1]=0
                     else:
                         bigPic=image
-                    border = np.zeros((50,bigPic.shape[1],bigPic.shape[2]))
-                    bigPic = np.concatenate((bigPic,border),axis=0)
 
                     
 
                     #if image.shape[2]==1:
                     #    image = cv2.cvtColor(image,cv2.COLOR_GRAY2RGB)
                     if 'pred' in out:
+                       border = np.zeros((50,bigPic.shape[1],bigPic.shape[2]))
+                       bigPic = np.concatenate((bigPic,border),axis=0)
                        cv2.putText(bigPic,'CER: {:.3f}, T: {}'.format(cer[b],pred_str[b]),(0,image.shape[0]+25), cv2.FONT_HERSHEY_SIMPLEX, 0.5,(0.9,0.3,0),2,cv2.LINE_AA)
-                    bigPic*=255
-                    bigPic = bigPic.astype(np.uint8)
+                    if not toColor:
+                        bigPic*=255
+                        bigPic = bigPic.astype(np.uint8)
                     if 'show_attention' in config:
                         if bigPic.shape[2]==1:
                             bigPic = cv2.cvtColor(bigPic,cv2.COLOR_GRAY2RGB)
@@ -166,10 +265,14 @@ def HWDataset_eval(config,instance, trainer, metrics, outDir=None, startIndex=No
                     #import pdb;pdb.set_trace()
 
         if 'gen' in out or 'gen_img' in out:
-            if 'gen' in out:
+            if 'gen' in out and out['gen'] is not None:
                 gen = out['gen'].cpu().detach().numpy()
-            if 'gen_img' in out:
+            elif 'gen_img' in out and  out['gen_img'] is not None:
                 gen = out['gen_img'].cpu().detach().numpy()
+            else:
+                #not sure why this happens
+                print('ERROR, None for generated images, {}'.format(name))
+                gen = np.ones((batchSize,1,5,5))
             for b in range(batchSize):
                 generated = (1-((1+np.transpose(gen[b][:,:,:],(1,2,0)))/2.0)).copy() *255
                 saveName = 'gen_{}.png'.format(name[b])
@@ -189,8 +292,12 @@ def HWDataset_eval(config,instance, trainer, metrics, outDir=None, startIndex=No
         losses[name] = losses[name].item()
     toRet=   { 
             **losses,
-            #'cer': cer
              }
+    if 'pred' in out:
+        toRet['cer']=sum_cer
+        toRet['wer']=sum_wer
+    if 'by_author' in config:
+        toRet.update(by_author)
 
     #decode spaced
     #d_spaced = []

@@ -1,0 +1,108 @@
+{
+    "name": "GANPure_hwrBal_pretrainedSpace_pixStats",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "AuthorHWDataset",
+
+        "Xdata_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",
+        "data_dir": "../data/IAM/",
+        "batch_size": 14,
+        "a_batch_size": 1,
+        "shuffle": true,
+        "num_workers": 2,
+
+        "img_height": 64,
+        "max_width": 1300,
+        "char_file": "./data/IAM_char_set.json",
+        "mask_post": ["thresh","dilateCircle","errodeCircle"],
+        "mask_random": false,
+        "fg_masks_dir": "../data/IAM/fg_masks"
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 36,
+        "a_batch_size": 1
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.0000001,
+        "weight_decay": 0,
+        "betas": [0.5,0.99]
+    },
+    "optimizer_type_discriminator": "Adam",
+    "optimizer_discriminator": {
+        "lr": 0.00001,
+        "weight_decay": 0,
+        "betas": [0,0.9]
+    },
+    "loss": {
+        "genRecog": "CTCLoss"
+    },
+    "loss_weights": {
+        "discriminator": 1,
+        "generator": 1,
+        "genRecog": 0.0001
+    },
+    "loss_params":
+        {
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 700000,
+        "save_dir": "saved/",
+        "val_step": 25000,
+        "save_step": 25000,
+        "save_step_minor": 250,
+        "log_step": 250,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "space_input": true,
+        "style_together": true,
+        "use_hwr_pred_for_style": true,
+        "hwr_without_style":true,
+        "slow_param_names": ["keys"],
+        "curriculum": {
+            "0": [  
+                        [1,"gen"],
+                        [1,"disc"],
+                        [1,"gen"],
+                        [1,"sample-disc"]]
+        },
+        "new_gen_freq": 0.2,
+        "forget_new_freq": 0.99,
+        "balance_loss": "sign_preserve_fixed",
+
+	"text_data": "../data/english_text.txt",
+
+        "use_learning_schedule": false,
+        "cache_spaced_label": false,
+        "print_dir": "train_out"
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 80,
+        "generator": "PureGen",
+        "gen_dim": 256,
+        "hwr": "CRNN_group_norm_softmax",
+        "pretrained_hwr": "saved/IAM_hwr_aug_softmax/checkpoint-latest.pth",
+        "hwr_frozen": true,
+        "style": "VAE-none",
+        "style_dim": 128,
+        "discriminator": "condAP wide no style",
+        "disc_use_pixel_stats": true,
+        "spacer": "duplicates",
+        "pretrained_spacer": "saved/fast_balPrsrvFx_condDiscAPActuallyStr_noBG_VAEnew_smallS_percept2WithAuto_aug/checkpoint-iteration100000.pth",
+        "create_mask": false
+
+    }
+}

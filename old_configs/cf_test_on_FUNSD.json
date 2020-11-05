@@ -1,0 +1,68 @@
+{
+    "name": "allfontSmall_ocr_softmax_1huge",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":true,
+    "data_loader": {
+        "data_set_name":"AuthorNAFlinesDataset",
+        "data_dir": "../data/FUNSD_ocr",
+        "img_height": 32,
+        "pad_ends": true,
+        "batch_size": 48,
+        "num_workers": 6,
+        "augmentation": null,
+        "a_batch_size": 1,
+        "type": "",
+        "char_file":"../data/english_char_set.json"
+    },
+
+    "validation": {
+        "shuffle": false,
+        "batch_size": 1
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.001,
+        "weight_decay": 0
+    },
+    "loss": {
+        "recog": "CTCLoss"
+    },
+    "loss_weights": {
+        "recog": 1
+    },
+    "loss_params": 
+        {
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 1000000,
+        "save_dir": "saved/",
+        "val_step": -1,
+        "save_step": 25000,
+        "save_step_minor": 250,
+        "log_step": 250,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "skip_auto": true,
+
+
+        "use_learning_schedule": false,
+        "casesensitive":false
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 131,
+        "hwr": "CRNN_batch_norm_softmax sma32",
+        "generator": "none",
+        "style": "none"
+    }
+}

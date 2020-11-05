@@ -1,12 +1,6 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 import torch.nn.functional as F
 import torch
-
+#from robust_loss_pytorch import AdaptiveLossFunction
 
 def pyramidL1Loss(gen,gt,weights=[1],pool='max', lossType='l1'):
     assert(gt.size(1)==1 and gen.size(1)==1)
@@ -39,8 +33,11 @@ def pyramidL1Loss(gen,gt,weights=[1],pool='max', lossType='l1'):
             l=F.l1_loss(s_gen,s_gt)
         elif lossType=='hinge':
             diff = (s_gen-s_gt).abs()
-            diff *= (diff>0.05).float()
+            diff *= (diff>0.02).float()
             l=diff.mean()
+        elif lossType=='robust':
+            l=AdaptiveLossFunction(s_gen,s_gt)
+            
         losses.append(l.item())
         loss += weight*l
     return loss,losses

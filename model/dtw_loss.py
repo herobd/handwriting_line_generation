@@ -1,9 +1,3 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 import timeit
 import torch
 import torch.nn.functional as F
@@ -51,7 +45,25 @@ def DTWLoss(pred,gt, downsize=0,lossType='l1', window=70):
     #allCosts = allCosts.cpu()
     #print('to gpu {}'.format(timeit.default_timer()-tic))
 
+    ##DTW code based on https://en.wikipedia.org/wiki/Dynamic_time_warping
+    #w = max(70, abs(pred_len-gt_len)) #window size
+    #dtw = torch.FloatTensor(pred_len+1,gt_len+1,batch_size).fill_(float('inf')).to(pred.device)
+    #dtw[0,0]=0
+    #for i in range(1,pred_len+1):
+    #    #for j in range(max(1, i-w), min(gt_len, i+w)+1):
+    #    #    dtw[i,j]=0
+    #    dtw[i,max(1, i-w):min(gt_len, i+w)+1]=0
+    #tic=timeit.default_timer()
+    #for i in range(1,pred_len+1):
+    #    for j in range(max(1, i-w), min(gt_len, i+w)+1):
+    #        cost = allCosts[:,i-1,j-1] #F.l1_loss(pred[:,:,:,i],gt[:,:,:,j],reduction='none').mean(dim=1).mean(dim=1)
+    #        per_batch_min,_ = torch.min( torch.stack( (dtw[i-1,j],dtw[i-1,j-1],dtw[i,j-1]) ), dim=0)
+    #        dtw[i,j] = cost + per_batch_min
+    #print('dtw {}'.format(timeit.default_timer()-tic))
+    #total_loss = dtw[-1,-1].mean()#.to(pred.device)
 
+    ##NEW
+    #DTW code based on https://en.wikipedia.org/wiki/Dynamic_time_warping
     #we compute the DTW off of the GPU and GRADIENT FREE (otherwise the computation graph is massive)
     #do do tract the alignemnt
     if type(window) is int:

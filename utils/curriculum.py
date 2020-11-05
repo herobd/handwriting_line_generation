@@ -1,9 +1,3 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 
 #{0: [[1,'gen','auto'],[1,'disc']]
 class Curriculum:
@@ -13,7 +7,9 @@ class Curriculum:
         self.valid = set() #all elements, as we are doing this just to measure error
         self.eval = set()
         self.need_sep_gen_opt = False
+        self.need_sep_style_ex_opt = False
         self.need_style_in_disc = False
+        self.sample_disc=False
         if lesson_desc==0:
             self.lessons=[]
         else:
@@ -26,12 +22,16 @@ class Curriculum:
                         if type(a) is str:
                             if 'auto-style' in a:
                                 self.need_sep_gen_opt = True
+                            if 'style-ex-only' in a:
+                                self.need_sep_style_ex_opt = True
                             if 'style-super' in a:
                                 self.need_style_in_disc = True
+                            if 'sample-disc' in a:
+                                self.sample_disc=True
                             new_lesson.append(a)
-                            if 'gen' not in a and 'disc' not in a: #as GAN losses aren't too informative...
+                            if 'gen' not in a and 'disc' not in a and a!='split-style' and 'triplet' not in a: #as GAN losses aren't too informative...
                                 self.valid.add(a)
-                            if 'disc' not in a: 
+                            if 'disc' not in a and a!='split-style' and 'triplet' not in a: 
                                 self.eval.add(a)
                         elif type(a) is int:
                             dup=a
@@ -44,10 +44,12 @@ class Curriculum:
         #self.lessons.sort(lambda a,b: b[0]-a[0]) #reverse sort based on iteration
         self.lessons.sort(key=lambda a: a[0], reverse=True)
         self.valid = list(self.valid)
+        self.valid.append('valid')
         self.eval = list(self.eval)
+        self.eval.append('eval')
 
     def getLesson(self,iteration):
-        if len(self.lessons)>0 and iteration>=self.lessons[-1][0]:
+        while len(self.lessons)>0 and iteration>=self.lessons[-1][0]:
             self.current_lessons = self.lessons.pop()[1]
 
         return self.current_lessons[ iteration%len(self.current_lessons) ]

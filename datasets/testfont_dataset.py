@@ -1,9 +1,3 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 from datasets import font_dataset
 import math
 import sys
@@ -25,8 +19,10 @@ def display(data):
         print(gt)
 
 
-        cv2.imshow('line',img.numpy())
-        cv2.waitKey()
+        #cv2.imshow('line',img.numpy())
+        #cv2.waitKey()
+        plt.imshow(img.numpy()[:,:,0], cmap='gray')
+        plt.show()
 
         #fig = plt.figure()
 
@@ -53,9 +49,10 @@ if __name__ == "__main__":
         repeat=1
     data=font_dataset.FontDataset(dirPath, split='train',config={
         'img_height': 64,
-        'fontfile': 'mono_fonts.txt',
+        'textdir': '../data/OANC_text',
         'center_pad': False,
-        'overfit': False
+        'overfit': False,
+        'augmentation': 'warp'
 })
     #data.cluster(start,repeat,'anchors_rot_{}.json')
 

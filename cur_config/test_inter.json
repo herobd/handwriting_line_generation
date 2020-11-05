@@ -1,8 +1,0 @@
-[
-    {
-        "interpolate": 0.1,
-        "style":["../../Documents/res1.png","../../Documents/res2.png","../../Documents/res3.png"],
-        "text": ["The quick brown fox jumps over the lazy dog."],
-        "out": ["../test/inter_test.png"]
-    }
-]

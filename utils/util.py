@@ -1,9 +1,3 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 import os, math
 import struct
 import torch
@@ -220,6 +214,8 @@ def makeMask(image, post=[], random=False):
 
 
     if len(post)>0:
+        #centersV_t, medians = getCenterValue(out)
+        #centersV_t = torch.from_numpy(centersV_t)
         centersV_t = torch.from_numpy(getCenterValue(out))
         centerV = centersV_t[:,None,...]
         height = out.size(2)
@@ -243,8 +239,8 @@ def makeMask(image, post=[], random=False):
     else:
         top_and_bottom = None
         centersV_t = None
-    assert(out.size(2)==64)
-    return blur(out),top_and_bottom,centersV_t
+    #assert(out.size(2)==64)
+    return blur(out),top_and_bottom,centersV_t #, medians
 
 
 def getCenterValue(mask):
@@ -256,6 +252,7 @@ def getCenterValue(mask):
     window = 3*height
     centers = np.zeros([mask.shape[0],mask.shape[3]],np.float32)
     centers[:] = height/2
+    #all_medians=[]
     for b in range(batch_size):
         #line_im = np.ones((height,width),np.uint8)
         #get mediana
@@ -287,8 +284,17 @@ def getCenterValue(mask):
             if last_point[0]<0 or last_point[0]>=height:
                 last_point = (med_y,width-1)
         else:
-            front_point = [med_y,med_x]
-            last_point = [med_y,med_x]
+            on=mask[b,0].sum()
+            if on == 0:
+                front_point = [height/2,0]
+                last_point = [height/2,width-1]
+            else:
+                y_indexes = np.arange(height)[:,None].repeat(width,axis=1)
+                x_indexes = np.arange(width)[None,:].repeat(height,axis=0)
+                med_x = (x_indexes*mask[b,0]).sum()/on
+                med_y = (y_indexes*mask[b,0]).sum()/on
+                front_point = [med_y,0]
+                last_point = [med_y,width-1]
         medians = [front_point]+medians+[last_point]
         for i in range(0,len(medians)-1):
             if math.isnan(medians[i][0]):
@@ -304,5 +310,80 @@ def getCenterValue(mask):
             rr,cc = draw.line(int(medians[i-1][0]),int(medians[i-1][1]),int(medians[i][0]),int(medians[i][1]))
             #line_im[rr,cc]=0
             centers[b][cc]=rr
-    return centers
+        #all_medians.append(medians)
+    return centers#, all_medians
 
+#-------------------------------------------------------------------------------
+# Name:        get_image_size
+# Purpose:     extract image dimensions given a file path using just
+#              core modules
+#
+# Author:      Paulo Scardine (based on code from Emmanuel VAÏSSE)
+#
+# Created:     26/09/2013
+# Copyright:   (c) Paulo Scardine 2013
+# Licence:     MIT
+# From:        https://stackoverflow.com/questions/15800704/get-image-size-without-loading-image-into-memory
+#-------------------------------------------------------------------------------
+class UnknownImageFormat(Exception):
+    pass
+
+def get_image_size(file_path):
+    """
+    Return (width, height) for a given img file content - no external
+    dependencies except the os and struct modules from core
+    """
+    size = os.path.getsize(file_path)
+
+    with open(file_path) as input:
+        height = -1
+        width = -1
+        data = input.read(25)
+
+        if (size >= 10) and data[:6] in ('GIF87a', 'GIF89a'):
+            # GIFs
+            w, h = struct.unpack("<HH", data[6:10])
+            width = int(w)
+            height = int(h)
+        elif ((size >= 24) and data.startswith('\211PNG\r\n\032\n')
+              and (data[12:16] == 'IHDR')):
+            # PNGs
+            w, h = struct.unpack(">LL", data[16:24])
+            width = int(w)
+            height = int(h)
+        elif (size >= 16) and data.startswith('\211PNG\r\n\032\n'):
+            # older PNGs?
+            w, h = struct.unpack(">LL", data[8:16])
+            width = int(w)
+            height = int(h)
+        elif (size >= 2) and data.startswith('\377\330'):
+            # JPEG
+            msg = " raised while trying to decode as JPEG."
+            input.seek(0)
+            input.read(2)
+            b = input.read(1)
+            try:
+                while (b and ord(b) != 0xDA):
+                    while (ord(b) != 0xFF): b = input.read(1)
+                    while (ord(b) == 0xFF): b = input.read(1)
+                    if (ord(b) >= 0xC0 and ord(b) <= 0xC3):
+                        input.read(3)
+                        h, w = struct.unpack(">HH", input.read(4))
+                        break
+                    else:
+                        input.read(int(struct.unpack(">H", input.read(2))[0])-2)
+                    b = input.read(1)
+                width = int(w)
+                height = int(h)
+            except struct.error:
+                raise UnknownImageFormat("StructError" + msg)
+            except ValueError:
+                raise UnknownImageFormat("ValueError" + msg)
+            except Exception as e:
+                raise UnknownImageFormat(e.__class__.__name__ + msg)
+        else:
+            raise UnknownImageFormat(
+                "Sorry, don't know how to get information from this file."
+            )
+
+    return width, height

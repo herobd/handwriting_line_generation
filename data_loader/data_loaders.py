@@ -1,9 +1,3 @@
-# Copyright 2020 Adobe
-# All Rights Reserved.
-
-# NOTICE: Adobe permits you to use, modify, and distribute this file in
-# accordance with the terms of the Adobe license agreement accompanying
-# it.
 import torch
 import torch.utils.data
 import numpy as np
@@ -24,12 +18,18 @@ import numpy as np
 #from datasets import random_messages
 #from datasets import random_diffusion
 from datasets import hw_dataset
+from datasets import mmd_hw_dataset
+from datasets import synth_text_dataset
+from datasets import synth_hw_dataset
 from datasets import author_hw_dataset
+from datasets import author_rimes_dataset
+from datasets import author_rimeslines_dataset
+from datasets import author_NAFlines_dataset
 from datasets import mixed_author_hw_dataset
 from datasets import author_word_dataset
 from datasets import mixed_author_word_dataset
 from datasets import style_word_dataset
-#from datasets import font_dataset
+from datasets import font_dataset
 #from datasets import same_font_dataset
 from datasets import spacing_dataset
 from datasets.style_author_dataset import StyleAuthorDataset
@@ -38,6 +38,46 @@ from base import BaseDataLoader
 
 
 
+#class MnistDataLoader(BaseDataLoader):
+#    """
+#    MNIST data loading demo using BaseDataLoader
+#    """
+#    def __init__(self, config):
+#        super(MnistDataLoader, self).__init__(config)
+#        self.data_dir = config['data_loader']['data_dir']
+#        self.data_loader = torch.utils.data.DataLoader(
+#            datasets.MNIST('../data', train=True, download=True,
+#                           transform=transforms.Compose([
+#                               transforms.ToTensor(),
+#                               transforms.Normalize((0.1307,), (0.3081,))
+#                           ])), batch_size=256, shuffle=False)
+#        self.x = []
+#        self.y = []
+#        for data, target in self.data_loader:
+#            self.x += [i for i in data.numpy()]
+#            self.y += [i for i in target.numpy()]
+#        self.x = np.array(self.x)
+#        self.y = np.array(self.y)
+#
+#    def __next__(self):
+#        batch = super(MnistDataLoader, self).__next__()
+#        batch = [np.array(sample) for sample in batch]
+#        return batch
+#
+#    def _pack_data(self):
+#        packed = list(zip(self.x, self.y))
+#        return packed
+#
+#    def _unpack_data(self, packed):
+#        unpacked = list(zip(*packed))
+#        unpacked = [list(item) for item in unpacked]
+#        return unpacked
+#
+#    def _update_data(self, unpacked):
+#        self.x, self.y = unpacked
+#
+#    def _n_samples(self):
+#        return len(self.x)
 
 def getDataLoader(config,split):
         data_set_name = config['data_loader']['data_set_name']
@@ -83,8 +123,20 @@ def getDataLoader(config,split):
             return withCollate(FormsFeaturePair,forms_feature_pair.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         elif data_set_name=='HWDataset':
             return withCollate(hw_dataset.HWDataset,hw_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
+        elif data_set_name=='MMDHWDataset':
+            return withCollate(mmd_hw_dataset.MMDHWDataset,mmd_hw_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
+        elif data_set_name=='SynthHWDataset':
+            return withCollate(synth_hw_dataset.SynthHWDataset,synth_hw_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
+        elif data_set_name=='SynthTextDataset':
+            return withCollate(synth_text_dataset.SynthTextDataset,synth_text_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         elif data_set_name=='AuthorHWDataset':
             return withCollate(author_hw_dataset.AuthorHWDataset,author_hw_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
+        elif data_set_name=='AuthorRIMESDataset':
+            return withCollate(author_rimes_dataset.AuthorRIMESDataset,author_rimes_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
+        elif data_set_name=='AuthorRIMESLinesDataset':
+            return withCollate(author_rimeslines_dataset.AuthorRIMESLinesDataset,author_rimeslines_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
+        elif data_set_name=='AuthorNAFlinesDataset':
+            return withCollate(author_NAFlines_dataset.AuthorNAFlinesDataset,author_NAFlines_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         elif data_set_name=='MixedAuthorHWDataset':
             return withCollate(mixed_author_hw_dataset.MixedAuthorHWDataset,mixed_author_hw_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         elif data_set_name=='AuthorWordDataset':
@@ -148,7 +200,10 @@ def withCollate(setObj,collateFunc,batch_size,valid_batch_size,shuffle,shuffleVa
         trainData = setObj(dirPath=data_dir, split='train', config=config['data_loader'])
         trainLoader = torch.utils.data.DataLoader(trainData, batch_size=batch_size, shuffle=shuffle, num_workers=numDataWorkers, collate_fn=collateFunc)
         validData = setObj(dirPath=data_dir, split='valid', config=config['validation'])
-        validLoader = torch.utils.data.DataLoader(validData, batch_size=valid_batch_size, shuffle=shuffleValid, num_workers=numDataWorkers, collate_fn=collateFunc)
+        if len(validData)>0:
+            validLoader = torch.utils.data.DataLoader(validData, batch_size=valid_batch_size, shuffle=shuffleValid, num_workers=numDataWorkers, collate_fn=collateFunc)
+        else:
+            validLoader = None
         return trainLoader, validLoader
     elif split=='test':
         testData = setObj(dirPath=data_dir, split='test', config=config['validation'])

@@ -1,0 +1,144 @@
+{
+    "name": "IAM32slant_noMask_bigStyleExAppend_GANMedMT_noAuto_balB_hCF0.75_sMG",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "AuthorHWDataset",
+
+        "Xdata_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",
+        "data_dir": "../data/IAM/",
+        "batch_size": 5,
+        "a_batch_size": 2,
+        "shuffle": true,
+        "num_workers": 2,
+
+        "img_height": 32,
+        "max_width": 1300,
+        "char_file": "./data/IAM_char_set.json",
+        "mask_post": ["thresh","dilateCircle","errodeCircle"],
+        "mask_random": false,
+        "augmentation": "affine"
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 12,
+        "a_batch_size": 2,
+        "augmentation": null
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.00005,
+        "weight_decay": 0,
+        "betas": [0.5,0.999]
+    },
+    "optimizer_type_discriminator": "Adam",
+    "optimizer_discriminator": {
+        "lr": 0.0001,
+        "weight_decay": 0,
+        "betas": [0.5,0.999]
+    },
+    "loss": {
+        "perceptual": "L1Loss",
+        "auto": "L1Loss",
+        "count": "MSELoss",
+        "mask": "HingeLoss",
+        "reconRecog": "CTCLoss",
+        "genRecog": "CTCLoss"
+    },
+    "loss_weights": {
+        "auto": 0.5,
+        "perceptual": 0.5,
+        "VAE_KLD": 10,
+        "discriminator": 1,
+        "generator": 1,
+        "count": 0.5,
+        "mask": 0.5,
+        "mask_generator": 0.5,
+        "mask_discriminator": 0.5,
+        "reconRecog": 0.000001,
+        "genRecog": 0.0001
+
+    },
+    "loss_params":
+        {
+            "mask": {"threshold": 4}
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "HWWithStyleTrainer",
+        "iterations": 900000,
+        "save_dir": "saved/",
+        "val_step": 10000,
+        "save_step": 25000,
+        "save_step_minor": 250,
+        "log_step": 250,
+        "verbosity": 1,
+        "monitor": "loss",
+        "monitor_mode": "none",
+        "space_input": true,
+        "style_together": true,
+        "use_hwr_pred_for_style": true,
+        "hwr_without_style":true,
+
+        "slow_param_names": ["keys"],
+        "curriculum": {
+            "0": [     
+                        ["count"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"]
+
+                    ] 
+        },
+        "new_gen_freq": 0.8,
+        "forget_new_freq": 0.95,
+        "balance_loss": "sign_preserve_var",
+        "balance_var_x": {"0":[0.75]},
+
+	"text_data": "../data/english_text.txt",
+
+        "use_learning_schedule": false,
+        "cache_spaced_label": false,
+        "no_bg_loss": true,
+
+
+        "print_dir": "train_out/IAM32slant_noMask_bigStyleExAppend_GANMedMT_noAuto_balB_hCF0.75_sMG",
+        "serperate_print_every": 5000,
+        "print_every": 200
+    },
+    "arch": "HWWithStyle", 
+    "model": {
+        "num_class": 80,
+        "generator": "PureGen small",
+        "gen_append_style": true,
+        "gen_dim": 256,
+        "gen_use_skips": true,
+	"hwr": "CNNOnly batchnorm small",
+        "pretrained_hwr": "saved/IAM32_hwr_cnnOnly_batchnorm_aug/checkpoint-USE.pth",
+        "hwr_frozen": true,
+        "count_std": 0.00000001,
+        "dup_std": 0.000000001,
+        "style": "VAE small",
+        "style_norm":"group",
+        "style_activ":"relu",
+        "style_dim": 128,
+        "style_extractor_dim": 32,
+        "num_keys": null,
+        "global_pool": true,
+        "attention": false,
+        "discriminator": "condAP wide, no style, no global, use low, no cond, small",
+        "disc_dim": 64,
+        "spacer": "CNN duplicates",
+        "spacer_fix_dropout": true
+
+
+    }
+}

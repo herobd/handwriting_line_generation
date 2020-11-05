@@ -1,0 +1,117 @@
+<!-- You must include this JavaScript file -->
+<script src="https://assets.crowd.aws/crowd-html-elements.js"></script>
+
+<style>
+crowd-radio-button[checked] {
+background:#fffac2;
+}
+crowd-radio-button { 
+font-size: 14px;
+}
+h4 {
+font-size: 15px;
+}
+</style>
+
+<!-- For the full list of available Crowd HTML Elements and their input/output documentation,
+      please refer to https://docs.aws.amazon.com/sagemaker/latest/dg/sms-ui-template-reference.html -->
+
+<div style="background: lightgray; padding:10px;">
+    <h2>Instructions:</h2>
+    Images are written either by a human or a computer (AI). <br>
+    First select what the writing in the image says. <br>
+    Then select whether you think the image was written by a human or computer.<br>
+    
+    <div style="overflow: auto; width: 50%; float: left;"><h4>Human written examples:</h4>
+    <!--<img src="http://students.cs.byu.edu/~brianld/instructions/hwex1.png" alt="real handwriting image example 1" height="90" style="padding:2px"><br>-->
+    <img src="http://students.cs.byu.edu/~brianld/instructions/hwex2.png" alt="real handwriting image example 1" height="80" style="padding:2px"><br>
+    <img src="http://students.cs.byu.edu/~brianld/instructions/hwex3.png" alt="real handwriting image example 2" height="80" style="padding:2px">
+    </div>
+    <div style="overflow: auto; margin-left: 50%;"><h4>Computer written examples:</h4>
+    <img src="http://students.cs.byu.edu/~brianld/instructions/genex1.png" alt="computer handwriting image example 1" height="80" style="padding:2px"><br>
+    <img src="http://students.cs.byu.edu/~brianld/instructions/genex2.png" alt="computer handwriting image example 2" height="80" style="padding:2px">
+    </div>
+</div>
+
+<!-- You must include crowd-form so that your task submits answers to MTurk -->
+<crowd-form answer-format="flatten-objects">
+<h2>Task:</h2>
+    <!-- The crowd-classifier element will create a tool for the Worker to select the
+           correct answer to your question.
+
+          Your image file URLs will be substituted for the "image_url" variable below 
+          when you publish a batch with a CSV input file containing multiple image file URLs.
+          To preview the element with an example image, try setting the src attribute to
+          "https://s3.amazonaws.com/cv-demo-images/one-bird.jpg" -->
+    
+    
+<div ><img src="${image_url}" alt="handwriting image" height="110" style="border-style: solid; border-color: red"></div>
+<div>
+    <h4>
+        What does the text in the image say?
+      </h4>
+      <crowd-radio-group required=True>
+        <script>
+            if (Math.random()<0.5) {
+                document.write('<crowd-radio-button name="text1" value="1"><label>${real_text}</label></crowd-radio-button>\
+                <br>\
+                <crowd-radio-button name="text2" value="0"><label>${false_text}</label></crowd-radio-button>')
+            } else {
+                document.write('<crowd-radio-button name="text1" value="0"><label>${false_text}</label></crowd-radio-button>\
+                <br>\
+                <crowd-radio-button name="text2" value="1"><label>${real_text}</label></crowd-radio-button>')
+            }
+            
+        </script>
+        
+        
+      </crowd-radio-group>
+      
+      <h4>
+        What wrote this?
+      </h4>
+      <crowd-radio-group required=True>
+          <crowd-radio-button name="human" value="human"><label>Human</label></crowd-radio-button>
+          <br>
+          <crowd-radio-button name="computer" value="computer"><label>Computer</label></crowd-radio-button>
+    
+    <br>
+    <crowd-button form-action='submit'>
+    Submit
+    </crowd-button>
+</div>
+<script>
+
+document.querySelector('crowd-form').onsubmit = function(e ) {
+
+   
+
+    let humanChecked = document.querySelector("crowd-radio-button[name='human']").checked
+
+    let computerChecked = document.querySelector("crowd-radio-button[name='computer']").checked
+
+ 
+
+    let text1Checked = document.querySelector("crowd-radio-button[name='text1']").checked
+
+    let text2Checked = document.querySelector("crowd-radio-button[name='text2']").checked
+
+ 
+
+ 
+
+    if( !(text1Checked || text2Checked) || !(humanChecked || computerChecked) ) {
+
+        alert("Please answer all the questions before submitting")
+
+ 
+
+        e.preventDefault();
+
+    }
+
+}
+
+</script>
+
+</crowd-form>

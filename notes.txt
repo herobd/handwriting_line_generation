@@ -1,458 +1,934 @@
-Notes on using new_eval.py
 
-python new_eval.py -c pth/to/snapshot.pth
+python new_eval.py -c saved/fontNAF32_ocr_softmax_1huge/checkpoint-iteration500000.pth -g 0 -f cf_test_on_FUNSD.json
 
--n, number of batches to save images for (of training set and validation, otherwise only validation set is evauated, this is needed if evaluating training set too)
+validation authors:299, 292, 288, 322, 286, 285, 302, 289, 308, 293, 315, 300, 309, 324, 298, 319, 295, 279, 313, 277, 296, 281, 278, 283, 282, 310, 290, 276, 321, 320, 297, 287, 305, 323, 291, 325, 280, 318, 316, 301, 312, 303, 304, 314, 317, 307, 178, 187, 194, 209, 207, 190, 175, 188, 173, 174, 208, 169, 202, 184, 199, 204, 205, 182, 197, 200, 180, 206, 185, 181, 203, 196, 172, 191, 170, 183, 198, 193, 168, 177, 179, 171, 195, 186, 210, 192, 201, 189, 176
 
-PRINTING:
--d ../out -g 0 -n 40 -a show_attention=full,data_loader=batch_size=1,validation=batch_size=1,data_loader=short=1,validation=short=1
--e [auto] -d ../out -g 0 -n 40 -a show_attention=full,data_loader=batch_size=1,validation=batch_size=1,data_loader=short=1,validation=short=1
+copying figures from GANwriting paper:
+Figure 6, use interpolate.py option f. Have to decide how much context the style extraction gets...
+Figure 7, do word ladder in single line?
 
--g 0 -d ../out -n 20 -e [recon,recon_gt_mask,mask,gen,gen_mask] -a data_loader=short=1
--g 0 -d ../out -n 10 -e [gen] -a data_loader=short=1
-
-SAVING STYLES
-use -a save_style=path/to/save/style.pkl,saveStyleEvery=5000
-This saves files style.pkl.# and val_styles.pkl.#, where # will be the section of saveStyleEvery batches. umap_styles.py globs them together if you pass it path/to/save/style.pkl
-Actually, it only does valiation, use -n 999999999999 (or your actual dataset size) to do the training set to.
+models that had good generation"
+IAM_GANMoreTxt_auto_balancedB_hwrCNNFlat0.75_smallMaskGen
+IAM_GANLessMoreTxt_auto_balancedB_hwrCNNFlat0.75_styleReconBig_smallMaskGen ~132k
 
 
 
-mixed words has num words train: 36692,  valid: 5552,  test:  16938
+IAM_GANTinyerMTSampleLess_autoMorePercptAE_balancedB_hCF0.75_styleRecon_triplet1.0_smallMaskGen/val_styles_106500.pkl
+inter dist mean: 0.16956637799739838, stddev: 0.20162056386470795
+intra dist mean: 0.5283595323562622, stddev: 0.4180704653263092
+
+IAM_GANTinyerMTSampleLess_autoMorePercptAE_balancedB_hCF0.75_styleRecon_triplet_smallMaskGen/val_styles_194750.pkl
+inter dist mean: 0.4799099564552307, stddev: 0.34657856822013855
+intra dist mean: 1.0273687839508057, stddev: 0.601312518119812
+
+IAM_GANTinyerMTSampleLess_autoMorePercptAE_balancedB_hCF0.75_styleRecon_smallMaskGen/val_styles_39250.pkl
+inter dist mean: 1.044875144958496, stddev: 0.9111852645874023
+intra dist mean: 1.210746169090271, stddev: 0.9183670282363892
+
+IAM_GANLessMoreTxt_auto_balancedB_hwrCNNFlat0.75_styleReconBig_smallMaskGen/val_styles_135500.pkl
+inter dist mean: 111.73526000976562, stddev: 21.55204963684082
+intra dist mean: 115.21257781982422, stddev: 7.848230838775635
+
+using transform
+IAM_noMask_GANTinyerMTSampleLess_autoMoPcptReal2tight_balancedB_hCF0.75_styleRecon_BIG_sMG
+inter dist mean: 0.3347439467906952, stddev: 0.2354753613471985
+intra dist mean: 0.33898234367370605, stddev: 0.22009094059467316
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+IAM_GANLessMoreTxt_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_styleDisc_smallMaskGen
+Had fuzzy recon at the beggining, but eventually lost all ledgibility (fail)
+
+IAM_GANTinyMoreTxt_auto_balancedB_hwrCNNFlat0.75_smallMaskGen
+Lacked style variation in gen and recon was bad
+
+IAM_GANTinyMoreTxt_auto_balancedB_hwrCNNFlat0.5_smallMaskGen
+Not good, but still has room to train
+
+IAM_GANTinyerMoreTxt_auto_balancedB_hwrCNNFlat0.75_smallMaskGen
+120k+ While char shape lacks variation, it does match stoke thickness on recon
+In _2 recon diverged
+
+IAM_GANTinyerMoreTxt_autoMorePercpt_balancedB_hwrCNNFlat0.75_styleRecon_smallMaskGen2
+recon diverged
+
+IAM_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon
+Lack of style and recon isn't matching. Still learning
+In _2, training divierged
+
+IAM_GANTinyestMoreTxt_auto_balancedB_hwrCNNFlat0.75_smallMaskGen
+This is working (bad recon still), perhaps it's the way to go?
+It still doesn't produce recon-loss guided appearence. Is this indicitive of an error?
+
+IAM_GANTinyerMoreTxtSampleLess_autoMorePercpt_balancedB_hwrCNNFlat0.4_smallMaskGen
+HWR doesn't seem strong enough, not ledgible. Also recon is bad
+
+IAM_GANTinyerMoreTxtSampleLess_autoMorePercpt_balancedB_hwrCNNFlat0.2_smallMaskGen
+Even worse. Definitley below the hwr threshold
+
+IAM_GANTinyerMoreTxtSampleLess_autoMorePercpt_balancedB_hwrCNNFlat0.75_smallMaskGen
+Recon is bad.
+
+IAM_GANTinyerMoreTxt_auto_balancedB_hwrCNNFlat0.2_smallMaskGen
+Also below HWR threshold. Not ledgible
+
+IAM_GANTinyerMoreTxt_autoMorePercpt_balancedB_hwrCNNFlat0.75_smallMaskGen
+Bad recon. _2 is the same
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_slowMask_smallMaskGen
+No noticable improvement, so mask overfitting may not be an issue
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Recon seems to line up, but style still isn't there
+
+SINGLE AUTHOR
+Works okay. Definitely better style matching than anything I've seen, but still imperfect.
+Needs decent HWR weight. 20k iter from general model to be convincing
+
+==========================
+
+IAM_GANLessMoreTxt_auto_balancedB_hwrCNNFlat0.75_styleReconBig_smallMaskGen
+Generation seems to have good variety, but recon is bad
+
+IAM_GANLessMoreTxtCharDisc_auto_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+Generation is ledgible, recon is starting to match. But they are definitely from different distributions.
+
+IAM_GANLessMTSampleLess_autoMorePercpt_balancedB_hCF0.2_smallMaskGen
+Failure. Likely too los of HWR
+
+IAM_GANLessMTSampleLess_autoMorePercpt_balancedB_hCF0.4_smallMaskGen
+Poor (but ledgible) gen and recon
+
+IAM_GANTinyerMoreTxt_auto_balancedB_hwrCNNFlat0.75_smallMaskGen
+Recon and gen lack variety
+
+IAM_GANTinyerMoreTxt_autoMorePercpt_balancedB_hwrCNNFlat0.75_smallMaskGen
+Gen is meh. Recon seems to be inconsistently getting close to style
+
+IAM_GANTinyerMoreTxtSampleLess_autoMorePercpt_balancedB_hwrCNNFlat0.4_smallMaskGen
+Failure. Not sure why, others at 0.4HWR are working
+
+IAM_GANTinyerMoreTxtSampleLess_autoMorePercpt_balancedB_hwrCNNFlat0.75_smallMaskGen
+Recon and gen are okay. Seem to be similar distribution at least
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_slowMask_smallMaskGen
+Recon is starting to sort of match. Gen lacks variety
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Probably the best recon (style-wise) I've seen using GAN. Oddly, the styleRecon loss doesn't go down (may not be contributing)
+
+IAM_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon_smallMaskGen
+Meh, meh, not horrible, not great
+
+IAM_GANTinyerMTSampleLess_autoMorePercpt_biggerGen_balancedB_hCF0.75_smallMaskGen
+Died. Not sure why
+
+IAM_GANTinyMoreTxt_auto_balancedB_hwrCNNFlat0.5_smallMaskGen
+meh
+
+=======================================================
+
+IAM_GANLessMoreTxtCharDisc_auto_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+recon is good, but a bit blurry. Gen is poor, but ledgible
+
+IAM_GANLessMTSampleLess_autoMorePercpt_balancedB_hCF0.4_smallMaskGen
+Recon us poor. Gen has a fair amount of vareity. 
+
+IAM_GANTinyerMoreTxtSampleLess_autoMorePercpt_balancedB_hwrCNNFlat0.75_smallMaskGen
+Recon is bad, gen isn't great. ending
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Seems to have lost its magic recon around 100k
+
+IAM_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon_smallMaskGen
+Appears to have decent recon and good gen
+
+=========================================================
+
+IAM_GANLessMTSampleLess_autoMorePercpt_balancedB_hCF0.4_smallMaskGen
+Recon is poor. Gen has a fair amount of vareity.
+
+IAM_GANTinyerMoreTxt_autoMorePercpt_balancedB_hwrCNNFlat0.75_smallMaskGen
+meh gen, not good recon. Ended
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+Recon is good, but fuzzy. Gen is not good. 81k
+
+IAM_GANTinyerMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Gen is meh. Recon is ..okay.. and fuzzy. 
+
+IAM_GANTinyerMT_autoOnlyPercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Similar. Very interesting....
+
+IAM_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon_smallMaskGen
+Recon definitly varies, but doesn't quite match. Gen has little variation
+
+IAM_GANTinyestMoreTxt_auto_balancedB_hwrCNNFlat0.4_smallMaskGen
+Died
+
+IAM_GANTinyestMoreTxt_auto_balancedB_hwrCNNFlat0.75_smallMaskGen
+Recon is inconsistently matching style. Gen is good, but lacks variety
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75,0.3_styleReconBig_smallMaskGen
+Too low of HWR still, recon starts to become illedgible
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_slowMask_smallMaskGen
+Recon is inconsistently matching style. Definitly significant style matching improvement with percptDiscLoss drop. (Going back up, why?)
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Not matching recon... When it had good recon the two AutoStyleLosses droped. But they went back up. Why?
+At the same time the AutoStyleLosses begin to drop, the discriminator loss drops. And also around the same time the KLDivergence, which had assumed its normal raised leve, drops to near 0, however, this seems to happen after the others move.
+Curiously, the countloss tracks the AutoStyleLosses pretty well. Perhaps the fluctuation has to do with changed in the style extractor. This would mean we want to slow training of the style extractor after some number of iterations. The style extractor is alread frozen on iterations with AutlStyle training. But we do it via a different optimizer. Perhaps this is problematic. We need to simply stop the gradient and use the same optimizer.
+
+==============================================
+
+IAM_GANLessMTSampleLess_autoMorePercpt_balancedB_hCF0.4_smallMaskGen
+Starting to fail, still bad recon.
+
+A few experiments with SampleLess and hCF0.4 were failures.
+
+IAM_GANTinyerMoreTxt_auto_balancedB_iM_hwrCNNFlat0.75_smallMaskGen
+Recon crashed. Gen wasn't good
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+Recon is looking less blurry. Gen is pretty poor.
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_slowMask_smallMaskGen
+Again, inconsistent style matching
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_styleReconBigger_smallMaskGen
+Recon seems to be starting to match
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_styleReconBig_smallMaskGen
+killed, not doing great, though ledgible and everything.
+Repeats also killed, recon was illedgible (no character formations)
+
+IAM_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon
+Now recon isn't matching, but gen has a bit better variation. kILLING 140k
+
+IAM_GANTinyestMoreTxt_auto_balancedB_hwrCNNFlat0.75_smallMaskGen
+Some good some bad. Very inconsistent. Stopping. 185k
+
+=========================================
+
+IAM_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Recon is looking pretty good
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCLAF0.75_styleReconBig_smallMaskGen
+***Both this and duplicated failed. Why?
+
+RIMES_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_smallMaskGen
+***both this and dup failed. Why?
+
+===============================
+
+Author overfitting:
+Training GAN with overfit-auto seems to work, but losing cleanness with reconstruction. GAN variety drops, but that's okay. Trying experimint with auto-gan
+
+GAN Only overfitting seems better, but lacks a way to clean up artifacts
+
+IAM_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Okay gen and recon, but nothing special. Recon has some artifacts
+
+IAM_GANTinyerMT_autoOnlyPercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Roughly the same as the above experiment, which is impressive given it is only using perceptual loss. But I would consider the above to be superior
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_styleReconBigger_smallMaskGen
+Inconsistantly matches style
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_styleReconBig_smallMaskGen2
+Recon is one style
+
+IAM_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon_smallMaskGen
+This has a significant amount of recon variation. The style fidelity isn't there though. And gen lacks the variation. Why?
+Are we overfitting a couple styles? Slant augmentation?
+
+================================================
+
+IAM_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Pretty good recon, but blurry and divergent from gen
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal
+Also pretty good recon, but very divergent from gen
+
+IAM_GANLessMoreTxtCharDisc_auto_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+"
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_slowMask_smallMaskGen
+Recon has collapsed to ta single style, ending
+
+IAM_ab1_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Recon is bad, which makes sense if the style vector is less consistent. ending
+
+============================================================
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal 285500
+Recon is the best Ive seen, probably of any experiment I've run. Gen is meh
+
+IAM_GANLessMoreTxtCharDisc_auto_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen 525000
+Recon is pretty good. Gen is meh
+
+=========================================================
+
+IAM_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Recon is good, but blurry
+
+IAM_GANLessMoreTxtCharDisc_auto_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+Recon pretty good still
 
 
-=======
+=========================================================
+
+IAMslant_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon_smallMaskGen
+Recon is looking pretty good. Slant is good?
+
+IAM_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Recon is fuzzy. Will it be overfitting?
+
+IAM_GANLessMoreTxtCharDisc_auto_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+Recon is pretty good. A little fuzzy. Overfitting?
+
+IAM_GANMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Not good recon or gen
+
+IAM_GANPure_lessSample_hwrBalx1.0_pretrainedSpaceVC_discNoContentNoStyle
+Has learned cursive and non-cursive "s", but not much other variety.
+
+IAM_GANTinyerMTSampleLessSampleStyle_autoMorePercpt_balancedB_hCF0.75_styleRecon_smallMaskGen
+Definitely a style collapse. Not sure why, sampling styles may not be cause
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+Still doing great
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen2
+seems on track, but not great yet (120000+)
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercptAE_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+Recon looking good. Gen is meh (odd since it is sampled style vectors)
+
+None of the noMask experiments are matching recon well, although none are blurry.
+
+==================================================================== Feb 25
+
+IAMslant_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon_smallMaskGen 130000
+Recon not as good. Although, on validation recon is better than other current methods
+
+IAM_GANLessMoreTxtCharDisc_auto_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen 655000
+Recon is still pretty fuzzy. Stopping
+
+IAM_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Recon is good, but fuzzy
+
+IAM_GANPure_lessSample_hwrBalx1.0_pretrainedSpaceVC_discNoContentNoStyle
+Fairly good quality, but definitely lacking in variety
+
+IAM_GANTinyerMTSampleLess_autoMorePercptAE_balancedB_hCF0.75_styleRecon_smallMaskGen
+Recon was great until 137000, it died, recovered in a poor spot
+
+IAM_GANTinyerMT_autoMorePercpt_balancedB_hCF0.75_styleReconBig_smallMaskGen_SGD 157000
+Neither recon or gen is too good
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercptAE_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+This also had a crash aroung 137000, interesting.
+
+======================================================================= Feb 26
+
+IAM_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Recon is blurry and okay
+
+IAM_GANPure_lessSample_hwrBalx1.0_pretrainedSpaceVC_discNoContentNoStyle
+Lacks variety. Stopping
+
+IAM_GANTinyerMTSampleLess_autoMorePercptAE_balancedB_hCF0.75_styleRecon_smallMaskGen
+Seems to have recovered fine. Recon isn't that great though
+
+IAM_GANTinyerMTSampleLess_autoMorePercptDetStyle_balancedB_hCF0.75_styleRecon_smallMaskGen
+Nothing worth mentioning. Stopped.
+
+IAM_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon_noMaskDisc_smallMaskGen
+Also not interesting. Stopping.
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercptAE_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+Seems to have recovered. Not sure if it's as good
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+Still seems alright
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen2
+A bit blurry, but still looking good
+
+IAM_noMask_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal 274000
+IAM_noMask_GANTinyerMTCharDisc_autoMorePercptAE_balancedB_hwrCNNFlat0.75_charBal_sMG 240000
+These both actually has some style copying abilities
+
+=========================================================================== Feb 28
+
+IAMslant_GANTinyerMTCharDisc_autoMorePercptAE_balancedB_hCF0.75_charBal_sMG 100000+
+Stopped. Not great
+
+IAMslant_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon_smallMaskGen 195000
+Recon is inconsistent
+
+IAM_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen 325000
+Recon is still a bit blurry. Gen seems to have a cursive and print style.
+
+IAM_GANTinyerMTSampleLess_autoMorePercptAE_balancedB_hCF0.75_styleRecon_smallMaskGen 186000
+Recon is inconsistent, but clean
+
+IAM_GANTinyerMoreTxtCharDiscSampleStyle_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallM 229000
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercptAE_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen 225000
+Recon a bit blurry, not great. Stopping
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen 521000
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen2 238000
+Meh, they're alright. Stopping repeat.
+
+IAM_noMask_GANTinyerMTCharDisc_autoMorePercptAE_balancedB_hwrCNNFlat0.75_charBal_sMG
+Recon isn't great
+
+IAM_noMask_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon_smallMaskGen
+Recopn doing some suprising things
+
+===================================================================== Mar 2
+
+IAMslant_charSpec_GANTinyerMTSampleLessSSty_autoAEMoPrcp2tight_balancedB_hCF0.75_styleRecon_sMG
+Recon matches slant really well, but pretty blurry
+
+IAMslant_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon_smallMaskGen 261000
+Recon is not great
+
+IAM_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen 386000
+Gen looks great, except the lack of character variations. Recon is a bit blurry and only ok.
+I think that a Att based Disc seems like a good idea. Of course statistic/set Disc is probably better
+
+IAM_GANTinyerMTSampleLess_autoMorePercptAE_balancedB_hCF0.75_styleRecon_smallMaskGen
+Single style? Stopping
+
+IAM_GANTinyerMTSampleLess_autoMorePercptAE_balancedB_hCF0.75_styleRecon_triplet1.0_smallMaskGen
+Meh, stopping
+
+IAM_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen 613000
+At this point a would expect better (even overfitting) recon, but it's still just okay. Some styles are almost spot on, but not most
+
+IAM_noMask_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Meh, poor gen and not great recon
+
+IAM_noMask_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal 541000
+Gen is messy, but has multiple 'f' forms? Recon is much better than above.
+
+IAM_noMask_GANTinyerMTCharDisc_autoMorePercptAE_balancedB_hwrCNNFlat0.75_charBal_sMG 501000
+Gen is similar to above, maybe different 'l' forms. Recon is good as well.
+
+IAM_noMask_GANTinyerMTSampleLess_autoMorePercpt2tight_balancedB_hCF0.75_styleRecon_BIG_sMG 141000
+Reasonbly good recon
+Looking the validation recon, this is as good as any other model I've trained
+
+IAM_noMask_GANTinyerMTSampleLess_autoMorePercpt_balancedB_hCF0.75_styleRecon 491000
+Recon is okay
+Looking validation, this model has something special
+
+==================================================================== Mar 3
+
+IAM_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen 409750
+Seems to have settled into some really good recon and gen. Recon is a bit blurry. Gen seemed to have disticnt 'f' shapes.
+Well, validation is roughly where is has been, maybe overfitting training? (finally)
+
+================================================================= Mar 4
+
+IAM_noMask_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen 557000
+Meg, no good recon. Stopping
+
+IAM_noMask_GANTinyerMTSampleLess_autoMorePercpt2tight_balancedB_hCF0.75_styleRecon_BIG_sMG
+Has great variety, but recon doesn't have fidelity
+
+IAM_noMask_GANTinyerMTCharDisc_autoMorePercptAE_balancedB_hwrCNNFlat0.75_charBal_sMG
+Okay recon
+
+IAMslant_GANTinyerMTSampleLessSStyAttDisc_autoMorePercpt2tight_balancedB_hCF0.75_styleRecon_sM 150000+
+Recon lacks too much variety. Stopped 
+
+=================================================================== Mar 5
+
+IAM_noMask_GANTinyerMTSampleLess_autoMorePercpt2tight_balancedB_hCF0.75_styleRecon_BIG_sMG
+Recon is pretty good (comparitavely to other stuff)
+
+IAM_noMask_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallMaskG
+Recon is okay. It as an artifactly style
+
+IAM_noMask_GANTinyerMTSampLess_autoAEMorePercpt2tight_balB_hCF0.75_styleRecon_styReg_BIG_sMG
+Check this adternoon, it was white
+And his buddy: IAM_noMask_GANTinyerMTSampLs_autoAEMoPcpt2tight_balancedB_hCF0.75_styleRecon_BIG_triplet1.0_sM
+
+================================================================ Mar 6
+
+IAMnorm_GANPure_lessSample_attDisc_hCEarly1.0_pretrainedSpaceVC_discNoContentNoStyle
+Has virtually no variety
+
+IAMnorm_noMask_GANTinyerMTSampLs_autoAEMoPcpt_balB_hCEarly0.75_styleRecon_BIG_triplet1.0_sMG
+IAMnorm_noMask_GANTinyerMTSampLs_autoMoPcpt2tight_balancedB_hCEarly0.75_styleRecon_BIG_sMG
+These also lack style, but likely need more training for reconstruction.
+
+IAM_noMask_GANMTSampLs_autoAEMoPcpt2tight_balB_hCF0.75_styleRecon_BIG_triplet1.0_sMG
+IAM_noMask_GANMTSampleLess_autoFeature_balancedB_hCF0.75_styleRecon_BIG_sMG
+These don't seem to be working. Is Tinyer important? Try smaller?
+
+IAM_noMask_GANTinyerMTCharDisc_autoMorePercptAE_balancedB_hwrCNNFlat0.75_charBal_sMG
+Recon is good, but only with some styles (?)
+
+IAM_noMask_GANTinyerMTSampLess_autoAEMorePercpt2tight_balB_hCF0.75_styleRecon_styReg_BIG_sMG
+IAM_noMask_GANTinyerMTSampLs_autoAEMoPcpt2tight_balancedB_hCF0.75_styleRecon_BIG_triplet1.0_sM
+Failure
+
+IAM_noMask_GANTinyerMTSampleLess_autoFeature_balancedB_hCF0.75_styleRecon_BIG_sMG
+IAM_noMask_GANTinyerMTSmDiscSampLs_autoFeature_balB_hCF0.75_styleRecon_BIG_sMG
+Very very blur. Why?
+
+IAM_noMask_GANTinyerMTSampleLess_autoMoPcptReal2tight_balancedB_hCF0.75_styleRecon_BIG_sMG
+Not great recon, but maybe looped and not-looped 'l's?
+
+IAM_noMask_GANTinyerMTSampleLess_autoMorePercpt2tight_balBSpace_hCF0.75_styleRecon_BIG_sMG 265000
+Some interesting reconstruction things going on
+
+IAM_GANLessMT_autoMorePercpt2tight_balancedB_hCF0.75_styleReconBig_smallMaskGen
+Valid Recon is blurry, but reasonably good otherwise
+
+IAM_noMask_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen
+IAM_noMask_GANTinyerMTCharDisc_autoMorePercptAE_balancedB_hwrCNNFlat0.75_charBal_sMG
+Valid recon is okay. Gen is funky (as usual)
+
+=============================================================== Mar 9
+
+IAMslant_charSpec_GANTinyerMTSampleLessSSty_autoAEMoPrcp2tight_balancedB_hCF0.75_styleRecon_sMG
+Recon is good, but blurry
+
+IAM_noMask_GANTinyerMTSampleLess_autoMorePercpt2tight_balancedB_hCF0.75_styleRecon_BIG_sMG repear noahs ark 354000
+Recon looks good, but inconsistent. Gen looks great but likely lacks variety
+Valid recon is meh, although it looks clean and varied 365000
+
+IAMnorm_GANPure_lessSample_attDisc_hCEarly1.0_pretrainedSpaceVC_discNoContentNoStyle
+a terrible lack of diversity
+
+IAMnorm_noMask_GANTinyerMTSampLs_autoAEMoPcpt_balB_hCEarly0.75_styleRecon_BIG_triplet1.0_sMG
+IAMnorm_noMask_GANTinyerMTSampLs_autoMoPcpt2tight_balancedB_hCEarly0.75_styleRecon_BIG_sMG
+IAMnorm_noMask_GANTinyerMTSampLs_autoMoPcptDisc_balBSpace_hCEarly0.75_styleRecon_BIG_sMG
+Recon is dispointing
+Valid is probably about as good as other experiments (which is disapointing)
+
+IAMslant_charSpec_GANMTSampleLessSSty_autoAEMoPrcp2tight_balancedB_hCF0.75_styleRecon_sMG 116000
+Poor recon. stopping
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG
+This has some good recon. It's a bit blurry, but spot on in some ways.
+Valid is also pretty good. Spot on slant. 118750
+
+IAM_GANLessMT_autoAEMorePercpt2tight_balancedB_hCF0.75_styleReconBig_styleReg_smallMaskGen 96000
+IAM_GANLessMT_autoAEMorePercpt2tight_balancedB_hCF0.75_styleReconBig_triplet1.0_smallMaskGen 111000
+Recon is not great,. stopping
+
+IAM_noMask_GANMTSampleLess_autoFeature_balancedB_hCF0.75_styleRecon_BIG_sMG
+Again failed. Why is hwr feature loss not working?
+
+IAM_noMask_GANTinyerMTCharDisc_autoMorePercptAE_balancedB_hwrCNNFlat0.75_charBal_sMG 843000
+After training so long id expect better. Stopping
+
+IAM_noMask_GANTinyerMTSampLsSmDisc_autoAEMoPcpt2tight_balB_hCF0.75_styleRecon_BIG_triplet1.0_s
+Meh not good recon
+
+IAM_noMask_GANTinyerMTSampleLess_autoMoPcptReal2tight_balancedB_hCF0.75_styleRecon_BIG_sMG
+Recon is ... okay...
+Valid recon is also okay 159000
+
+IAM_noMask_GANTinyerMoreTxtCharDisc_autoMorePercpt_balancedB_hwrCNNFlat0.75_charBal_smallMaskGen 894000
+valid recon is okay. This is endded due to how long it's been training
+
+IAM_noMask_GANTinyerMTCharDisc_autoMorePercptAE_balancedB_hwrCNNFlat0.75_charBal_sMG 847000
+valid recon is better than above
+
+============================================================= mar 11
+
+IAMnormSlant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_BIG_sMG
+Recon isn't great yet, but potential
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 162000
+Recon is pretty good
+
+IAM_GANLessMT_autoAEMorePercpt2tight_balancedB_hCF0.75_styleReconBig_triplet1.0_smallMaskGen 152000
+Recon is pretty good, but blurry
+
+IAM_noMask_GANTinyerMTSampleLess_autoMoPcptReal2tight_balancedB_hCF0.75_styleRecon_BIG_sMG 215000
+Recon is pretty good, bit blurry
+
+IAM_noMask_GANTinyerMTSampleLess_autoMorePercpt2tight_balBSpace_hCF0.75_styleRecon_BIG_sMG 189000
+recon is broken most of the time. Gen is fine (though lacking variety)
+
+IAM_noSpacingDeeper_GANPure_lessSample_hwrBalx1.0_pretrainedSpaceVC_discNoContentNoStyle
+died
+
+============================================================ mar 16
+
+IAM_noMask_GANTinyerMTDNoHighSampleLess_autoMorePercpt2tight_balancedB_hCF0.75_styleRecon_BIG_sMG 291000
+Recon/gen have good variety, but recon isn't very true
+
+IAM_noMask_GANTinyerMTSampleLess_autoFeature_balancedB_hCF0.75_styleRecon_BIG_sMG 148000
+faint, bad
+
+IAM_noMask_GANTinyerMTSampleLess_autoMoPcptReal2tight_balancedB_hCF0.75_styleRecon_BIG_sMG 373000
+Recon is okay, a little fuzzy. Gen lacks variety
+
+IAM_noMask_GANTinyerMTSampleLess_autoMorePercpt2tight_balancedB_hCF0.75_styleRecon_BIG_sMG 575000
+Recon is meh, though crips. Gen lacks variety
+
+IAM_noMask_GANTinyerMTSampleLess_autoMorePercpt2tight_balBSpace_hCF0.75_styleRecon_BIG_sMG 343000
+Recon is okay and crips. Gen lack variation
+
+IAMnormSlant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 148000
+Recon looks good, though still missing specifix char shapes. Gen lacks variety
+
+IAMnormSlant_noMask_GANTinyerMTSampLs_autoMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 194000
+Not nearly as good as above.
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_BIG_sMG 144000
+Recon is good, but a little fuzzy. Gen has artifacts and lacks variety
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 284000
+Recon is also good
+**THIS IS THE CANDIDATE**
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG2 93000
+Recon is a bit fuzzy and not as good
+
+IAMslant_noMask_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 219000
+Not as good and fuzzier
+
+IAMslant_noMask_GANTinyerMTSampLs_autoMoPrcp2tight_balB_hCF0.75_styleRecon_BIG_sMG 170000.
+Also not as good. Char spec is important I guess
+
+IAMslant_noMask_GANTinyerMTSampLs_autoMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 206000
+Ditto, but gen is alright
+
+IAMslant_noMask_GANTinyerMTSampLs_autoMoPrcp2tight_balBSpace_hCF0.75_styleRecon_sMG 199000
+Ditto
+
+IAMslant_noMask_GANTinyerMTSampLs_autoRobMoPrcp2tight_balB_hCF0.75_styleRecon_BIG_sMG 119000
+oof, this is worse than no char spec
+
+valid_IAMslant_noMask_GANTinyerMTSampLs_autoRobMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 102000
+yep...
+
+=============================================================== Mar 18
+
+Best curent:
+IAMslant_noMask_charSpecNoDisc_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sM
+IAMslant_noMask_charSpecSmAvg_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG
+IAMslant_noMask_charSpec_GANTinyerMTSampLsBgExtSmSt_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon promising :)
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_noStyleRecon_sMG
+
+============================================================= Mar 23
+
+++vv Not interesting
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEFeat_balB_hCF0.75_styleRecon_sMG 10?000
+blurry mess. kill
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_noHWR_styleRecon_sMG 32000
+Nothin much. Kill?
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcpDisc_balB_hCF0.75_styleRecon_sMG 171000
+Recon isn't good and very faint
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAENoPrcp_balB_hCF0.75_styleRecon_sMG 177000
+blurry mess. kill
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoNoPixAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 174000
+Not realistic
+
+IAMslant_noMask_charSpec_noGAN_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 231000
+Fairly blurry
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEPrcpDiscOnlyWin3BgSE_balB_hCF0.75_fxSpacer_fst_sMG 173000
+Not too great
+
+++^^
+
+IAM_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 1710000
+Recon is good, but there are some unrealistic artifacts (e.g. halfway loop/not-loop 'f's).
+
+IAMslant_noMask_charSpec_GANSmallMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 156000
+Recon is okay, but has unconvincing realism.
+
+IAMslant_noMask_charSpec_GANTinyerMTNoSamp_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 170000
+Better than above, but still unconvincing realism
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balBCount_hCF0.75_styleRecon_sMG 172000
+Good recon, but still unconvicing. Some artifacts, particularly in interpolation
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_noStyleRecon_sMG 174000
+okay recon, a bit blurry.
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_fst_sMG 171000
+Recon is good, but it in unconvincing
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_fxSpacerDrop_sMG 71000
+Recon is good, but definitely blurry. Needs to train longer?
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleReconMo_sMG 172000
+Good recon, not convicing, but alright
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_moStSp_sMG 101000
+Okay, probably needs to train longer
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCnoAugF0.75_styleRecon_sMG 173000
+Recon is good. A bit blurry in spots. Interpolated space poor
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hRF0.75_styleRecon_sMG 157000
+meh, unconvincing
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tightWin3_balB_hCF0.75_styleRecon_sMG 129000
+Good recon, but not convincing
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tightWin3BgSE_balB_hCF0.75_styleRecon_sMG 128000
+recon is good, but too blurry to be convincing
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoNoPyrAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 167000
+Recon is altight, but a bit blurry throughout
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLsBgDisc_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 148000
+Recon is good, but just a bit blurry/unrealistic
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLsBgExtSmSt_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 155000
+Recon is ... alight... not realistic
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLsBig_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 168000
+Bit blurry in places
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLsBnd_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 157000
+Recon is good, but unrealistic
+
+IAMslant_noMask_charSpec_GANTinyerMTSampMo_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 166000
+but blurry
+
+IAMslant_noMask_charSpecMoAvg_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 172000
+Just a little bit blurry. Dots on 'i's are wonky
+
+IAMslant_noMask_charSpecNoDisc_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 185000
+Reasonibly convincing, but still some artifacts
+
+IAMslant_noMask_charSpecSmAvg_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_sMG 167000
+Bit blurry and artifacts. But okay other than that
+
+IAMslant_noMask_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_smallStyle_sMG 186000
+Blurry, not too bad
+
+IAMslant_noMask_GANTinyerMTSampLs_autoMoPrcp2tight_balB_hCF0.75_styleRecon_smallStyle_sMG 177000
+"
+
+============================================================== Apr 3
+
+IAMslant_noMask_charSpecTnyStyle_GANMedMT_autoAEMoPrcp2tightNoPyrWin3BgSE_balB_hCF0.75_sMG
+Gen looks pretty good
+
+IAMslant_noMask_charSpec_GANMedMT_authorClass_balB_hCF0.9_sMG
+IAMslant_noMask_charSpec_GANMedMT_authorClass_balB_hCF0.75_sMG
+Illedgible
+
+IAMslant_noMask_charSpec_GANMedMT_autoAEMoPrcp2tightNewNoPyrWin3BgSE_balB_hCF0.75_sMG
+Gen looks great, but recon has weird double thing going on
+
+IAMslant_noMask_charSpec_GANMedMT_autoAEMoPrcp2tightNoPyrWin2BgSE_balB_hCF0.75_sMG 242000
+Recon is alright, nothing special
+
+IAMslant_noMask_charSpec_GANMedMT_autoAEMoPrcp2tightNoPyrWin3BgSE_balB_hCF0.75_sMG 255000
+IAMslant_noMask_charSpec_GANMT_autoAEMoPrcp2tightNoPyrWin3BgSE_balB_hCF0.75_sMG 247000
+Recon has faint artifacts (smooth). Gen is fine.
+
+IAMslant_noMask_charSpec_GANMTBigDisc_autoAEMoPrcp2tightNoPyrWin3BgSE_balB_hCF0.75_sMG 223000
+Also smooth recon. Gen is grainy, but apears to be step in training
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_fxSpacerDrop 315000
+Smooth recon. Gen has artifacts
+
+IAMslant_noMask_charSpec_GANTinyerMTSampLs_autoAEMoPrcp2tight_balB_hCF0.75_styleRecon_moStSp 270000
+Recon is a little more artifacty than the others. Gen similar
+
+IAMslant_noMask_charSpec_gen1d_GANMedMT_autoAEMoPrcp2tightNoPyrWin3BgSE_balB_hCF0.75_sMG 213000
+meh. mostly the same
+
+IAMslant_noMask_charSpecGeneral_GANMedMT_autoAEMoPrcp2tightNoPyrWin3BgSE_balB_hCF0.75_sMG 175000
+Looks pretty similar to others. So char spec isn't that important...
+Died around 190000
+
+IAMslant_noMask_charSpecNoGen_GANMedMT_autoAEMoPrcp2tightNoPyrWin3BgSE_balB_hCF0.75_sMG 244000
+Recon smooth, gen is good
+
+IAMslant_noMask_charSpecTnyStyle_GANMedMT_autoAEMoPrcp2tightNoPyrWin3BgSE_balB_hCF0.75_sMG 243000
+Recon is maybe better than the others. Maybe... Gen has slight artifacts
+
+IAMslant_noMask_genAppStyle_GANMedMT_autoAEMoPrcp2tightNoPyrWin3BgSE_balB_hCF0.75_sMG 284000
+Recon is smooth, more artifacts (definitely worse than others). Gen is good
+
+IAMslant_noMask_charSpec_noGAN_autoAEMoPrcp2tightNoPyrWin3BgSE_balB_hCF0.75_sMG 350000
+Just as good as with the GAN
+
+================================== Apr 6
+
+IAMslant_noMask_charSpec_GANMedMT_autoAEMoPrcp2tightNoPyrWin3BgSEAuthorClass_balB_hCF0.75_sMG 500000
+This looks different than other experiments. Slant is imperfect, but other elements of style seem to be better, maybe? It has WAY better realism than previous experiments. No smoothness
+
+IAMslant_noMask_charStylePred_GANMedMT_autoAEMoPrcp2tightNoPyrBgSE_balB_hCF0.75_sMG 178000
+Smooth, aslmost blurry.. Not great, buit still has room to rain??
+
+=============================== Apr 8
+
+IAMslant_noMask_charStylePred_noGAN_autoAEMoPrcp2tightNoPyrBgSE_balB_hCF0.75_sMG 1650000
+Poor, very smooth/blurry
+
+IAMslant_noMask_charStylePred_GANMedMT_autoAEMoPrcp2tightNoPyrBgSE_balB_hCF0.75_sMG 300000
+Gen looks alright, recon is very smooth
+
+IAMslant_noMask_charSpecPred_GANMedMT_autoNoPyrBgSEAuthorClsFx_balB_hCF0.75_sMG
+Failed to learn
+
+IAMslant_noMask_charStylePred_GANMoreMT_autoAEMoPrcp2tightNoPyrBgSE_balB_hCF0.75_sMG 154000
+This is looking really bad
+
+IAMslant_noMask_charSpec_GANMedMT_authorClsFx_balB_hCF0.75_sMG
+IAMslant_noMask_charSpec_GANMedMT_lessAuthorClsFx_balB_hCF0.75_sMG
+These are not working well and failing
+
+========================================== Apr 9
+IAMslant_noMask_charStylePred_GANMoreMT_autoAEMoPrcp2tightNoPyrBgSE_balB_hCF0.75_sMG 175000
+This is looking really bad. Killed
+
+========================================= Apr 10
+IAMslant_noMask_bigStyleEx_GANMedMT_autoAEMoPrcp2tightNoPyr_balB_hCF0.75_sMG 88000
+Gen looks alright, recon is smooth and not too good
+
+IAMslant_noMask_charSpecSingleBgStyle_GANMedMT_autoAEMoPrcp2tightNoPyrWin2BgSE_balB_hCF0.75_sMG 103000
+Gen looks alright, recon is bumpy, not great
+
+IAMslant_noMask_charSpecSingle_GANInCharge_autoAEMoPrcp2tightNoPyrWin2BgSE_balB_hCF0.75_sMG 106000
+Looks pretty similar actually... not doing what I'd hoped
+
+====================================== Apr 13
+
+IAMslant_noMask_bigStyleEx_GANMedMT_autoAEMoPrcp2tightNoPyr_balB_hCF0.75_sMG
+Recon is smooth. Gen looks realistic, but lacks variety.
+
+IAMslant_noMask_bigStyleEx_GANMedMT_autoAEMoPrcp2tightNoPyrUseGen_balB_hCF0.75_sMG 91000
+Gen is good. Recon is somewhat realistic, not great matching though
+
+IAMslant_noMask_charSpecPred_GANMedMT_autoNoPixPrcp2tightBgSEAuthorClsFx_balB_hCF0.75_sMG
+Seems to have a style collapse
+
+IAMslant_noMask_charSpecSingleAppend_GANMedMT_autoAEMoPrcp2tightNoPyrWin2BgSE_balB_hCF0.75_sMG
+IAMslant_noMask_charSpecSingleBgStyle_GANMedMT_autoAEMoPrcp2tightNewCTCWin2_balB_hCF0.75_sMG
+These seem to have a certain appeal
+
+IAMslant_noMask_charSpecSingleBgStyle_GANMedMT_autoAEMoPrcp2tightNoPyrWin2UseGen_balB_hCF0.75_sMG
+This is probably the best I've seen (from newer models)
+
+IAMslant_noMask_charSpecSingle_GANMedMT_autoAEMoPrcp2tightUseGenWin2BgSE_balB_hCF0.75_sMG
+This, however, is struggling
+
+IAMslant_noMask_charSpecSingle_GANMedMT_autoAEMoPrcp2tightNoPyrWin2BgSEAuthorClsFx_balB_hCF0.75_sMG
+While author AuthorCls didn't seem interesting, this may have something
+
+IAMslant_noMask_charSpec_GANMedMT_autoAEMoPrcp2tightNoPyrWin2MoreAuthorClsFx_balB_hCF0.75_sMG
+This also seemed interesting and should be compared to its counterpart
+
+TODO:
+UseGen without gen only training steps, or atleast fewer
+
+THIS IS IT, FINAL FINAL:
+IAMslant_noMask_charSpecSingleAppend_GANMedMT_autoAEMoPrcp2tightNewCTCUseGen_balB_hCF0.75_sMG
 
 
-{
-    "name": "long_bmStAuto_balPrsrv_Gskip_Gdist_ohwr",
-    "cuda": true,
-    "gpu": 0,
-    "save_mode": "state_dict",
-    "override": true,
-    "super_computer":false,
-    "data_loader": {
-        "data_set_name": "AuthorHWDataset",
+Unforunately, there was a bug, so this is the model? IAMslant_noMask_bigStyleEx_GANMedMT_autoAEMoPrcp2tightNoPyr_balB_hCF0.75_sMG
 
-        "data_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",
-        "Xdata_dir": "../data/IAM/",
-        "batch_size": 1,
-        "a_batch_size": 2,
-        "shuffle": true,
-        "num_workers": 2,
+Is there any additional things to try... noisy style vector, but we can probably skip that
+YES: new encoder!
 
-        "img_height": 64,
-        "max_width": 1400,
-        "char_file": "./data/IAM_char_set.json",
-        "mask_post": ["thresh","dilateCircle","errodeCircle"],
-        "mask_random": false,
-        "spaced_loc": "../saved/spaced/spaced.pkl"
-    },
-    "validation": {
-        "shuffle": false,
-        "batch_size": 3,
-        "a_batch_size": 2,
-        "spaced_loc": "../saved/spaced/val_spaced.pkl"
-    },
+Oblation: 
+[we need to run in parallele, both with and without new encoder]
+[Also big extractor? Bigger style vector?]
+[append style?]
+no char spec extraction
+Only GAN, but have to do VAE. But what about spacer... TRAIN THE SPACER,DUH
+No spacing, uniform spacing, PureGen model
+No spacing and no VAE
+No pixel loss
+No perceptual loss
+No GAN
+No HWR
+Gradient balancing?
+With author cls?
 
-    
-    "lr_scheduler_type": "none",
- 
-    "optimizer_type": "Adam",
-    "optimizer": {
-        "lr": 0.00001,
-        "weight_decay": 0,
-        "betas": [0.5,0.99]
-    },
-    "optimizer_type_discriminator": "Adam",
-    "optimizer_discriminator": {
-        "lr": 0.00001,
-        "weight_decay": 0,
-        "betas": [0,0.9]
-    },
-    "loss": {
-        "auto": "pyramidL1Loss",
-        "key": "pushMinDist",
-        "count": "MSELoss",
-        "mask": "HingeLoss",
-        "feature": "L1Loss",
-        "reconRecog": "CTCLoss",
-        "genRecog": "CTCLoss",
-        "genAutoStyle": "L1Loss"
-    },
-    "loss_weights": {
-        "auto": 1,
-        "discriminator": 0.1,
-        "generator": 0.01,
-        "key": 0.001,
-        "count": 0.1,
-        "mask": 0.1,
-        "mask_generator": 0.01,
-        "mask_discriminator": 0.01,
-        "feature": 0.0000001,
-        "reconRecog": 0.000001,
-        "genRecog": 0.0001,
-        "style_discriminator": 0.1,
-        "style_generator": 0.01,
-        "genAutoStyle": 0.1
+select health 8664425052
+8664357414 op3
 
-    },
-    "loss_params":
-        {
-            "auto": {"weights":[0.4,0.3,0.3],
-                     "pool": "avg"},
-            "key": {"dist":"l1",
-                    "thresh": 1.0},
-            "mask": {"threshold": 4}
-        },
-    "metrics": [],
-    "trainer": {
-        "class": "HWWithStyleTrainer",
-        "iterations": 700000,
-        "save_dir": "../saved/",
-        "val_step": 2000,
-        "save_step": 5000,
-        "save_step_minor": 250,
-        "log_step": 100,
-        "verbosity": 1,
-        "monitor": "loss",
-        "monitor_mode": "none",
-        "space_input": true,
-        "style_together": true,
-        "use_hwr_pred_for_style": true,
-        "hwr_without_style":true,
-        "slow_param_names": ["keys"],
-        "curriculum": {
-            "0": [["auto"],["auto-disc"]],
-            "1000": [["auto", "auto-gen"],["auto-disc"]],
-            "80000": [["count","mask","gt_spaced","mask-gen"],["auto-disc","mask-disc"]],
-            "100000": [  [1,"count","mask","gt_spaced","mask-gen"],
-                        ["auto","auto-gen","count","mask","gt_spaced","mask_gen"],
-                        ["auto","auto-mask","auto-gen","count","mask","gt_spaced","mask_gen"],
-                        [2,"gen","gen-auto-style"],
-                        [2,"disc","mask-disc"],
-                        [2,"auto-disc","mask-disc"]]
-        },
-        "balance_loss": "sign_preserve",
-        "interpolate_gen_styles": "extra-0.25",
+= NoSpace	: IAMslant_noMaskNoSpace_charSpecSingleAppend_GANMedMT_autoAEMoPrcp2tightNewCTCUseGen_balB_hCF0.75_sMG moved to noahs ark, needs to finish still
+= NoGAN		: IAMslant_noMask_charSpecSingleAppend_noGAN_autoAEMoPrcp2tightNewCTCUseGen_balB_hCF0.75_sMG on noaksark, not done
+= NoAuto	: IAMslant_noMask_bigStyleExAppend_GANMedMT_noAuto_balB_hCF0.75_sMG: nephisboat, realistic, escept for wobbliness, and great variety (at least at texture level)
+= NoSpace NoAuto: IAMslant_noMaskNoSpace_bigStyleExAppend_GANMedMT_noAuto_balB_hCF0.75_sMG : noahsark
+		  IAMslant_noMaskNoSpace_bigStyleExAppend_GANMedMT_noAuto_balB_hCF0.75_sMG2 is finished, needs eval *
+= NoPix		: IAMslant_noMask_charSpecSingleAppend_GANMedMT_autoNoPixPrcpNewCTCUseGen_balB_hCF0.75_sMG : oldshipzion, fairly good, character shapes are a bit wobbly
+= NoPrcp	: IAMslant_noMask_charSpecSingleAppend_GANMedMT_autoNoPrcpUseGen_balB_hCF0.75_sMG: failed to train (just spoltches, artifacts), rerunning on oldshipzion with adjusted params
+= NoHWR		: IAMslant_noMask_charSpecSingleAppend_GANMedMT_autoAEMoPrcp2tightNewCTCUseGen_balB_noHWR_sMG : oldshipzion+nephisboat, fuzzy, but legible
+= NoCharSpec	: IAMslant_noMask_bigStyleExAppend_GANMedMT_autoAEMoPrcp2tightNewCTC_balB_hCF0.75_sMG: jareditebarge, recon is poor, some artifacts
+= balOrig	: IAMslant_noMask_charSpecSingleAppend_GANMedMT_autoAEMoPrcpNewCTCUseGen_balOrig_hCF0.75_sMG : nephisboat, this failed, I'm rerunning with a lowered learning rate
 
-	"text_data": "data/lotr.txt",
+=========================================
+Missing:
+new auto-encoder, started training one with CTC
 
-        "use_learning_schedule": false
-    },
-    "arch": "HWWithStyle", 
-    "model": {
-        "num_class": 80,
-        "generator": "SpacedWithMask",
-        "gen_dim": 128,
-        "gen_n_res1": 2,
-        "gen_n_res2": 3,
-        "gen_n_res3": 2,
-        "gen_use_skips": true,
-        "dist_map_text_for_gen": true,
-	"hwr": "CRNN_group_norm_softmax",
-        "pretrained_hwr": "../saved/IAM_hwr_softmax/checkpoint-latest.pth",
-        "hwr_frozen": true,
-        "style": "new",
-        "style_norm":"group",
-        "style_activ":"relu",
-        "style_dim": 256,
-        "num_keys": 64,
-        "global_pool": true,
-        "discriminator": "two-scale-better more low global",
-        "spacer": "duplicates",
-        "create_mask": true,
-        "mask_discriminator": "with derivitive"
+are there any other hyper parameters I should test? 
+ - GAN settings, no GAN
+ - 
 
-    }
-}
-{
-    "name": "long_bmStAuto_balPrsrv_Gskip_Gdist_ohwr_big",
-    "cuda": true,
-    "gpu": 0,
-    "save_mode": "state_dict",
-    "override": true,
-    "super_computer":false,
-    "data_loader": {
-        "data_set_name": "AuthorHWDataset",
+simplest methods, done or running:
+ - no char spec: noGAN (X), full GAN (X) These are under bigStyleEx, as other style ex have more params
+ - global-to-char: noGAN (X), full GAN ( ), probably bigger ex as well
+ - heads-to-global: noGAN (X), full GAN ( )
+At this point, it's probably not worth testing author class stuff
 
-        "data_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",
-        "Xdata_dir": "../data/IAM/",
-        "batch_size": 1,
-        "a_batch_size": 2,
-        "shuffle": true,
-        "num_workers": 2,
 
-        "img_height": 64,
-        "max_width": 1200,
-        "char_file": "./data/IAM_char_set.json",
-        "mask_post": ["thresh","dilateCircle","errodeCircle"],
-        "mask_random": false,
-        "spaced_loc": "../saved/spaced/spaced.pkl"
-    },
-    "validation": {
-        "shuffle": false,
-        "batch_size": 3,
-        "a_batch_size": 2,
-        "spaced_loc": "../saved/spaced/val_spaced.pkl"
-    },
 
-    
-    "lr_scheduler_type": "none",
- 
-    "optimizer_type": "Adam",
-    "optimizer": {
-        "lr": 0.00001,
-        "weight_decay": 0,
-        "betas": [0.5,0.99]
-    },
-    "optimizer_type_discriminator": "Adam",
-    "optimizer_discriminator": {
-        "lr": 0.00001,
-        "weight_decay": 0,
-        "betas": [0,0.9]
-    },
-    "loss": {
-        "auto": "pyramidL1Loss",
-        "key": "pushMinDist",
-        "count": "MSELoss",
-        "mask": "HingeLoss",
-        "feature": "L1Loss",
-        "reconRecog": "CTCLoss",
-        "genRecog": "CTCLoss",
-        "genAutoStyle": "L1Loss"
-    },
-    "loss_weights": {
-        "auto": 1,
-        "discriminator": 0.1,
-        "generator": 0.01,
-        "key": 0.001,
-        "count": 0.1,
-        "mask": 0.1,
-        "mask_generator": 0.01,
-        "mask_discriminator": 0.01,
-        "feature": 0.0000001,
-        "reconRecog": 0.000001,
-        "genRecog": 0.0001,
-        "style_discriminator": 0.1,
-        "style_generator": 0.01,
-        "genAutoStyle": 0.1
 
-    },
-    "loss_params":
-        {
-            "auto": {"weights":[0.4,0.3,0.3],
-                     "pool": "avg"},
-            "key": {"dist":"l1",
-                    "thresh": 1.0},
-            "mask": {"threshold": 4}
-        },
-    "metrics": [],
-    "trainer": {
-        "class": "HWWithStyleTrainer",
-        "iterations": 700000,
-        "save_dir": "../saved/",
-        "val_step": 2000,
-        "save_step": 5000,
-        "save_step_minor": 250,
-        "log_step": 100,
-        "verbosity": 1,
-        "monitor": "loss",
-        "monitor_mode": "none",
-        "space_input": true,
-        "style_together": true,
-        "use_hwr_pred_for_style": true,
-        "hwr_without_style":true,
-        "slow_param_names": ["keys"],
-        "curriculum": {
-            "0": [  [1,"count","mask","gt_spaced","mask-gen"],
-                        ["auto","auto-gen","count","mask","gt_spaced","mask_gen"],
-                        ["auto","auto-mask","auto-gen","count","mask","gt_spaced","mask_gen"],
-                        [1,"gen","gen-auto-style"],
-                        [1,"disc","mask-disc"],
-                        [1,"auto-disc","mask-disc"]],
-            "50": [["auto"],["auto-disc"]],
-            "1000": [["auto", "auto-gen"],["auto-disc"]],
-            "80000": [["count","mask","gt_spaced","mask-gen"],["auto-disc","mask-disc"]],
-            "100000": [  [1,"count","mask","gt_spaced","mask-gen"],
-                        ["auto","auto-gen","count","mask","gt_spaced","mask_gen"],
-                        ["auto","auto-mask","auto-gen","count","mask","gt_spaced","mask_gen"],
-                        [2,"gen","gen-auto-style"],
-                        [2,"disc","mask-disc"],
-                        [2,"auto-disc","mask-disc"]]
-        },
-        "balance_loss": "sign_preserve",
-        "interpolate_gen_styles": "extra-0.25",
 
-	"text_data": "data/lotr.txt",
+Have:
+no style spec, using larger style extractor and larger style vector. Also using author class 
 
-        "use_learning_schedule": false
-    },
-    "arch": "HWWithStyle", 
-    "model": {
-        "num_class": 80,
-        "generator": "SpacedWithMask",
-        "gen_dim": 256,
-        "gen_n_res1": 2,
-        "gen_n_res2": 3,
-        "gen_n_res3": 2,
-        "gen_use_skips": true,
-        "dist_map_text_for_gen": true,
-        "clip_gen_mask": 1200,
-	"hwr": "CRNN_group_norm_softmax",
-        "pretrained_hwr": "../saved/IAM_hwr_softmax/checkpoint-latest.pth",
-        "hwr_frozen": true,
-        "style": "new",
-        "style_norm":"group",
-        "style_activ":"relu",
-        "style_dim": 512,
-        "num_keys": 80,
-        "global_pool": true,
-        "discriminator": "two-scale-better more low global",
-        "spacer": "duplicates",
-        "create_mask": true,
-        "mask_discriminator": "with derivitive"
+Global-to-char style
+ - author class, more and less, no pix
 
-    }
-}
-{
-    "name": "long_balMatch",
-    "cuda": true,
-    "gpu": 0,
-    "save_mode": "state_dict",
-    "override": true,
-    "super_computer":false,
-    "data_loader": {
-        "data_set_name": "AuthorHWDataset",
+heads-to-global, append style, big and small style, GAN primary, author class, bigstyle with no GAN
 
-        "data_dir": "/trainman-mount/trainman-storage-8308c0a4-7f25-47ad-ae22-1de9e3faf4ad",
-        "Xdata_dir": "../data/IAM/",
-        "batch_size": 1,
-        "a_batch_size": 2,
-        "shuffle": true,
-        "num_workers": 2,
+char spec, author class
+===============================
+job [ IAMslant_noMask_bigStyleEx_GANMedMT_autoAEMoPrcp2tightNewCTC_balB_hCF0.75_sMG ] not running!
+job [ IAMslant_noMask_bigStyleEx_GANMedMT_autoAEMoPrcp2tightNewCTC_balB_noHWR_sMG ] not running!
+job [ IAMslant_noMask_bigStyleEx_GANMedMT_autoNoPixMoPrcp2tightNewCTC_balB_hCF0.75_sMG ] not running!
+job [ IAMslant_noMask_bigStyleEx_GANMedMT_autoNoPrcp_balB_hCF0.75_sMG ] not running!
+job [ IAMslant_noMaskNoSpace_bigStyleEx_GANMedMT_noAuto_balB_hCF0.75_sMG ] not running!
+job [ IAMslant_noMask_bigStyleEx_GANMedMT_autoAEMoPrcp2tightNoPyr_balOrig_hCF0.75_sMG ] not running!
+job [ IAMslant_noMask_bigStyleExAppend_noGAN_autoAEMoPrcp2tightNewCTC_balB_hCF0.75_sMG ] not running!
+                 IAMslant_noMask_bigStyleEx_GANMedMT_autoAEMoPrcp2tightNewCTC_balB_hCF0.75_sMG  35579939        0:05 m8g-2-7
+                    IAMslant_noMask_bigStyleEx_noGAN_autoAEMoPrcp2tightNewCTC_balB_hCF0.75_sMG  35580087        1:18 m8g-2-11
+          IAMslant_noMaskNoSpace_bigStyleEx_GANMedMT_autoAEMoPrcp2tightNewCTC_balB_hCF0.75_sMG  35604760        0:06 m8g-1-7
+                      IAMslant_noMaskNoSpace_bigStyleExAppend_GANMedMT_noAuto_balB_hCF0.75_sMG  35724602       45:59 m9g-1-8
+NEWNEWNEWNEWNEWNEWNEW
+IAMslant_noMask_charSpecSingle_GANMedMT_autoAEMoPrcp2tightNoPyrWin2BgSEAuthorClsFx_balB_hCF0.7  35324774       10:40 m9g-2-5
+IAMslant_noMask_charSpecSingleAppend_GANMedMT_autoAEMoPrcp2tightNewCTCUseGen_balB_hCF0.75_sMG  35636214        0:14 m8g-3-4
+            IAMslant_noMask_bigStyleEx_GANMedMT_autoAEMoPrcp2tightNoPyrUseGen_balB_hCF0.75_sMG  35423984        0:10 m8g-1-1
+                                   IAMslant_noMask_bigStyleEx_GANMedMT_noAuto_balB_hCF0.75_sMG  35604291        0:07 m8g-1-4 ##This had trouble training... Nan or inf loss
+                    IAMslant_noMask_bigStyle_GANMedMT_autoAEMoPrcp2tightNoPyr_balB_hCF0.75_sMG  35370715        0:00 (Priority)
+This [FUNSDLines_pair_graphAtt2P2_smallContext_prop_readGT] is unconclusive and can finish on nephisboat
 
-        "img_height": 64,
-        "max_width": 1400,
-        "char_file": "./data/IAM_char_set.json",
-        "mask_post": ["thresh","dilateCircle","errodeCircle"],
-        "mask_random": false,
-        "spaced_loc": "../saved/spaced/spaced.pkl"
-    },
-    "validation": {
-        "shuffle": false,
-        "batch_size": 3,
-        "a_batch_size": 2,
-        "spaced_loc": "../saved/spaced/val_spaced.pkl"
-    },
-
-    
-    "lr_scheduler_type": "none",
- 
-    "optimizer_type": "Adam",
-    "optimizer": {
-        "lr": 0.00001,
-        "weight_decay": 0,
-        "betas": [0.5,0.99]
-    },
-    "optimizer_type_discriminator": "Adam",
-    "optimizer_discriminator": {
-        "lr": 0.00001,
-        "weight_decay": 0,
-        "betas": [0,0.9]
-    },
-    "loss": {
-        "auto": "pyramidL1Loss",
-        "key": "pushMinDist",
-        "count": "MSELoss",
-        "mask": "HingeLoss",
-        "feature": "L1Loss",
-        "reconRecog": "CTCLoss",
-        "genRecog": "CTCLoss",
-        "genAutoStyle": "L1Loss"
-    },
-    "loss_weights": {
-        "auto": 1,
-        "discriminator": 0.1,
-        "generator": 0.01,
-        "key": 0.001,
-        "count": 0.1,
-        "mask": 0.1,
-        "mask_generator": 0.01,
-        "mask_discriminator": 0.01,
-        "feature": 0.0000001,
-        "reconRecog": 0.000001,
-        "genRecog": 0.0001,
-        "style_discriminator": 0.1,
-        "style_generator": 0.01,
-        "genAutoStyle": 0.01
-
-    },
-    "loss_params":
-        {
-            "auto": {"weights":[0.4,0.3,0.3],
-                     "pool": "avg"},
-            "key": {"dist":"l1",
-                    "thresh": 1.0},
-            "mask": {"threshold": 4}
-        },
-    "metrics": [],
-    "trainer": {
-        "class": "HWWithStyleTrainer",
-        "iterations": 500000,
-        "save_dir": "../saved/",
-        "val_step": 2000,
-        "save_step": 5000,
-        "save_step_minor": 250,
-        "log_step": 100,
-        "verbosity": 1,
-        "monitor": "loss",
-        "monitor_mode": "none",
-        "space_input": true,
-        "style_together": true,
-        "use_hwr_pred_for_style": true,
-        "hwr_without_style":true,
-        "slow_param_names": ["keys"],
-        "curriculum": {
-            "0": [["auto-disc"]],
-            "1000": [["count","mask","gt_spaced","mask-gen"],["auto-disc","mask-disc"]],
-            "21000": [  [1,"count","mask","gt_spaced","mask-gen"],
-                        ["auto","auto-gen","count","mask","gt_spaced","mask_gen"],
-                        ["auto","auto-mask","auto-gen","count","mask","gt_spaced","mask_gen"],
-                        [2,"gen","gen-auto-style"],
-                        [2,"disc","mask-disc"],
-                        [2,"auto-disc","mask-disc"]]
-        },
-        "balance_loss": "sign_match",
-        "interpolate_gen_styles": "extra-0.25",
-
-	"text_data": "data/lotr.txt",
-
-        "use_learning_schedule": false
-    },
-    "arch": "HWWithStyle", 
-    "model": {
-        "num_class": 80,
-        "generator": "SpacedWithMask",
-        "gen_dim": 128,
-        "gen_n_res1": 2,
-        "gen_n_res2": 3,
-        "gen_n_res3": 2,
-        "pretrained_generator":"../saved/Phase1_IAM_spacedS1DmaskRound_newStylePredGlobalKL1closer_GAN2lDless_nhwr/checkpoint-latest.pth",
-	"hwr": "CRNN_group_norm_softmax",
-        "pretrained_hwr": "../saved/IAM_hwr_softmax_aug/checkpoint-latest.pth",
-        "hwr_frozen": true,
-        "style": "new",
-        "style_norm":"group",
-        "style_activ":"relu",
-        "style_dim": 256,
-        "num_keys": 64,
-        "global_pool": true,
-        "pretrained_style":"../saved/Phase1_IAM_spacedS1DmaskRound_newStylePredGlobalKL1closer_GAN2lDless_nhwr/checkpoint-latest.pth",
-        "discriminator": "two-scale-better more low global",
-        "spacer": "duplicates",
-        "create_mask": true,
-        "mask_discriminator": "with derivitive"
-
-    }
-}
+JOBS
+                                                       NAFG_pair_graphAtt2P2_smallContext_prop  36141445        0:00 (Priority)
+                                                               MMD_hwr_crnn_batchnorm_augLines  36135139     4:08:21 m8g-1-7
+                                                                    MMD_hwr_crnn_batchnorm_aug  36135134     4:11:07 m8g-1-3
+                                                          MMD_hwr_cnnOnlyPad_batchnorm_augClip  36142633        0:16 m8g-1-1
+                                                             MMD_hwr_crnnPad_batchnorm_augClip  36135436     3:07:11 m8g-1-3
+                                        FUNSDLines_pair_graphAtt2P2_smallContext_prop_readGTBP  35925074 df
