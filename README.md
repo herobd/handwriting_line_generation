@@ -6,7 +6,7 @@ This is the code for the paper "Text and Style Conditioned GAN for the Generatio
 
 This was originally Brian Davis's summer 2019 internship project at Adobe (https://github.com/adobe-research/hw_with_style). It was then extended afterwards (while at BYU) and finally published.
 
-The trained models (snapshots) will be available as a file in the release.
+The trained models (snapshots) are available as a file in the release (https://github.com/herobd/handwriting_line_generation/releases/tag/w1.0).
 
 Code structure based on victoresque pytorch template.
 
@@ -51,7 +51,7 @@ You can also use `-h`
 
 It has several "modes" to select from once it's loaded the model. Use `h` to display them. Most will ask for additional input (desired text, number of styles, etc). The output is saved to the supplied `-d` location.
 
-Some modes need the datasets styles in a pickle. Use `get_styles.py` to extract these. Some modes just want example images.
+Some modes need the datasets styles in a pickle. I've included the IAM/RIME test sets with the trained snapshots. Use `get_styles.py` to extract any additional ones. Some modes just want example images.
 
 `python get_styles.py -c path/to/snapshot.pth -d output_directory -g #[optional gpu flag] -T[optional, do test set, otherwise does trian and valid]`
 
