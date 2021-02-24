@@ -17,7 +17,7 @@
         "augmentation": "affine",
         "img_height": 64,
         "max_width": 1300,
-        "char_file": "../data/RIMES/characterset_lines.json",
+        "char_file": "data/RIMES_characterset_lines.json",
         "center_pad": false
     },
     "validation": {
