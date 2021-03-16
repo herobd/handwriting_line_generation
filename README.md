@@ -55,6 +55,13 @@ Some modes need the datasets styles in a pickle. I've included the IAM/RIME test
 
 `python get_styles.py -c path/to/snapshot.pth -d output_directory -g #[optional gpu flag] -T[optional, do test set, otherwise does trian and valid]`
 
+## Data
+
+The RIMES training uses a text file of French (`french_news.txt`). This really can be any medium (maybe even small) French text corpus. I used the one found at https://webhose.io/free-datasets/french-news-articles/
+To compile it's jsons into the .txt file, use the script found at `data/compile_french_new.py`. First create a file listing all the jsons (`ls > jsons.txt`) then run the script.
+
+I don't remember where I got the english text corpus (at least part of it is the OANC https://www.anc.org/data/oanc/download/ dataset), but really any one should do. It just expects a txt file with just text.
+
 ## Folder Structure
   ```
   
