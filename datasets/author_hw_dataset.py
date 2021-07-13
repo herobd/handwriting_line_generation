@@ -42,14 +42,14 @@ def collate(batch):
     else:
         max_spaced_label_len = None
 
-    input_batch = torch.full((len(batch)*a_batch_size, dim1, dim2, dim3), PADDING_CONSTANT)
-    mask_batch = torch.full((len(batch)*a_batch_size, dim1, dim2, dim3), PADDING_CONSTANT)
+    input_batch = torch.FloatTensor(len(batch)*a_batch_size, dim1, dim2, dim3).fill_(PADDING_CONSTANT)
+    mask_batch = torch.FloatTensor(len(batch)*a_batch_size, dim1, dim2, dim3).fill_( PADDING_CONSTANT)
     if 'fg_mask' in batch[0]:
-        fg_masks = torch.full((len(batch)*a_batch_size, 1, dim2, dim3), 0)
+        fg_masks = torch.FloatTensor(len(batch)*a_batch_size, 1, dim2, dim3).fill_( 0)
     if 'changed_image' in batch[0]:
-        changed_batch = torch.full((len(batch)*a_batch_size, dim1, dim2, dim3), PADDING_CONSTANT)
-    top_and_bottom_batch = torch.full((len(batch)*a_batch_size,2,dim3), 0)
-    center_line_batch = torch.full((len(batch)*a_batch_size,dim3), dim2/2)
+        changed_batch = torch.FloatTensor(len(batch)*a_batch_size, dim1, dim2, dim3).fill_(PADDING_CONSTANT)
+    top_and_bottom_batch = torch.FloatTensor(len(batch)*a_batch_size,2,dim3).fill_( 0)
+    center_line_batch = torch.FloatTensor(len(batch)*a_batch_size,dim3).fill_( dim2/2)
     labels_batch = torch.IntTensor(max_label_len,len(batch)*a_batch_size).fill_(0)
     if max_spaced_label_len is not None:
         spaced_labels_batch = torch.IntTensor(max_spaced_label_len,len(batch)*a_batch_size).fill_(0)
