@@ -6,6 +6,7 @@ import umap
 import pickle, sys, random
 from collections import defaultdict
 from glob import iglob
+import os
 
 #sns.set(style='white', context='poster', rc={'figure.figsize':(14,10)})
 np.random.seed(42)
