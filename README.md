@@ -23,7 +23,7 @@ Code structure based on victoresque pytorch template.
 ## Reproducability instructions
 In the `configs` directory are several jsons which have the parameters used for the paper. The `"data_loader": "data_dir"` needs set to the location of the dataset directory. You can also adjust the GPU options here.
 
-First the handwriting reconition model and feature encoder networks need trained.
+First the handwriting recognition model and feature encoder networks need to be trained.
 
 HWR: `python train.py -c configs/cf_IAM_hwr_cnnOnly_batchnorm_aug.json`
 
