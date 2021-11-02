@@ -2,8 +2,7 @@ from base import BaseModel
 import torch
 from torch import nn
 import torch.nn.functional as F
-from .net_builder import getGroupSize
-from .grcl import NewGRCL
+from utils.util import getGroupSize
 
 
 class Autoencoder(BaseModel):

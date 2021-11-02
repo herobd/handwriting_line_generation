@@ -8,59 +8,10 @@ from torch.autograd import Function
 from math import sqrt
 import random
 
-class PureGenerator(nn.Module):
-    def __init__(self, n_class, style_size, dim=256, output_dim=1, n_style_trans=6,depth1=3,depth2=2):
-        super(PureGenerator, self).__init__()
-        fused=True
-        convs = [
-                StyledConvBlock(n_class,dim,upsample=False,style_dim=style_size,initial='1d')
-                ]
-        for i in range(depth1):
-            convs.append(
-                StyledConvBlock(dim,dim,upsample=False,style_dim=style_size)#kernel_size=(4,3),padding=(0,1)),
-                )
-        if depth2==0:
-            convs.append(
-                    StyledConvBlock(dim,dim//2,upsample=True,only_vertical=True,fused=False,style_dim=style_size)#kernel_size=(4,3),padding=(0,1)),
-                    )
-        else:
-            convs.append(
-                    StyledConvBlock(dim,dim//2,upsample=True,style_dim=style_size)#kernel_size=(4,3),padding=(0,1)),
-                    )
-            for i in range(depth2):
-                convs.append(
-                    StyledConvBlock(dim//2,dim//2,upsample=False,style_dim=style_size)
-                    )
-
-        convs += [
-                StyledConvBlock(dim//2,dim//4,upsample=True,only_vertical=True,fused=False,style_dim=style_size),
-                StyledConvBlock(dim//4,dim//8,upsample=True,only_vertical=False,fused=fused,style_dim=style_size),
-                StyledConvBlock(dim//8,dim//16,upsample=True,only_vertical=False,fused=fused,style_dim=style_size),
-                ]
-        self.conv = nn.Sequential(*convs)
-
-        self.out = nn.Sequential(EqualConv2d(dim//16, output_dim, 1), nn.Tanh())
-
-        layers = [PixelNorm()]
-        for i in range(n_style_trans):
-            layers.append(nn.Linear(style_size, style_size))
-            layers.append(nn.LeakyReLU(0.2))
-
-        self.style_emb = nn.Sequential(*layers)
-        self.gen=self.conv
-
-    def forward(self, content,style,mask=None,return_intermediate=False): #, noise=None):
-        content = content.permute(1,2,0) #swap [T,b,cls] to [b,cls,T]
-        content = content.view(content.size(0),content.size(1),1,content.size(2)) #now [b,cls,H,W]
-
-        style = self.style_emb(style)
-        x,_ = self.conv((content,style))
-        return self.out(x)
 
 class SpacedGenerator(nn.Module):
-    def __init__(self, n_class, style_size, dim=256, output_dim=1, n_style_trans=6,dist_map_content=False, emb_dropout=False, append_style=False,small=False):
+    def __init__(self, n_class, style_size, dim=256, output_dim=1, n_style_trans=6, emb_dropout=False, append_style=False,small=False):
         super(SpacedGenerator, self).__init__()
-        self.dist_map_content = dist_map_content
         fused=True
         self.append_style = append_style
         if append_style:
@@ -88,200 +39,15 @@ class SpacedGenerator(nn.Module):
         self.style_emb = nn.Sequential(*layers)
         self.gen=self.conv
 
-    def forward(self, content,style,mask=None,return_intermediate=False): #, noise=None):
+    def forward(self, content,style,return_intermediate=False): #, noise=None):
         content = content.permute(1,2,0) #swap [T,b,cls] to [b,cls,T]
         content = content.view(content.size(0),content.size(1),1,content.size(2)) #now [b,cls,H,W]
-        if self.dist_map_content:
-            batch_size = content.size(0)
-            max_len=10
-            add=None
-            for b in range(batch_size):
-                #print('batch {}'.format(b))
-                start=0
-                curIdx=-1
-                for x in range(content.size(3)):
-                    idx = content[b,:,0,x].argmax()
-                    #print('x:{}, start:{}, curIdx:{}, idx:{}'.format(x,start,curIdx,idx))
-                    if idx!=0 and x-start>0:
-                        if curIdx==-1 and x-start>max_len:
-                            start = x-max_len
-                        step = (1-0.1)/((x-start+1)/2)
-                        #print('step {} = (1-0.1)/(({}-{}+1)/2)'.format(step,x,start))
-                        v=1-step
-                        for xd in range((x-start)//2 +((x-start)%2)):
-                            if idx!=-1:
-                                content[b,idx,0,x-(xd+1)]=v
-                                #print('content[{},{},{},{}]={}'.format(b,idx,0,x-(xd+1),v))
-                            if curIdx!=-1:
-                                content[b,curIdx,0,start+xd]=v
-                                #print('content[{},{},{},{}]={}'.format(b,curIdx,0,start+xd,v))
-                            v-=step
-
-                    if idx!=0:
-                        start=x+1
-                        curIdx=idx
-                x = content.size(3)
-                if x-start>max_len:
-                    start = x-max_len
-                step = (1-0.1)/((x-start+1)/2)
-                v=1-step
-                for xd in range((x-start)//2 +1):
-                    if curIdx!=-1:
-                        content[b,curIdx,0,start+xd]=v
-                        #print('pext[{},{},{},{}]={}'.format(b,curIdx,0,start+xd,v))
-                    v-=step
 
         style = self.style_emb(style)
         if self.append_style:
             content=torch.cat((content,style[:,:,None,None].expand(-1,-1,1,content.size(3))),dim=1)
         x,_ = self.conv((content,style))
         return self.out(x)
-
-class CharSpacedGenerator(nn.Module):
-    def __init__(self, n_class, style_size,char_style_size, dim=256, output_dim=1, n_style_trans=6,dist_map_content=False,emb_dropout=False,skip_char_style=False,first1d=False):
-        super(CharSpacedGenerator, self).__init__()
-        assert(not dist_map_content)
-        fused=True
-        if skip_char_style:
-            char_style_size=0
-        self.skip_char_style=skip_char_style
-
-        if first1d:
-            start_dim = dim
-            self.conv1d = nn.Sequential(
-                    StyledConvBlock(n_class+char_style_size,dim,upsample=False,style_dim=style_size,kernel_size=(1,3),padding=(0,1)),
-                    StyledConvBlock(dim,dim,upsample=False,style_dim=style_size,kernel_size=(1,3),padding=(0,1)),
-                    StyledConvBlock(dim,dim,upsample=False,style_dim=style_size,kernel_size=(1,3),padding=(0,1)),
-                    )
-        else:
-            start_dim = n_class+char_style_size
-            self.conv1d = None
-
-        self.conv = nn.Sequential(
-                StyledConvBlock(start_dim,dim,upsample=False,style_dim=style_size,initial=True),
-                StyledConvBlock(dim,dim//2,upsample=True,only_vertical=True,fused=False,style_dim=style_size),
-                StyledConvBlock(dim//2,dim//4,upsample=True,only_vertical=True,fused=False,style_dim=style_size),
-                StyledConvBlock(dim//4,dim//8,upsample=True,only_vertical=False,fused=fused,style_dim=style_size),
-                StyledConvBlock(dim//8,dim//16,upsample=True,only_vertical=False,fused=fused,style_dim=style_size),
-                )
-
-        self.out = nn.Sequential(EqualConv2d(dim//16, output_dim, 1), nn.Tanh())
-
-        layers = [PixelNorm()]
-        for i in range(n_style_trans):
-            layers.append(nn.Linear(style_size, style_size))
-            if emb_dropout and i<n_style_trans-1:
-                layers.append(nn.Dropout(0.5))
-            layers.append(nn.LeakyReLU(0.2))
-        self.style_emb = nn.Sequential(*layers)
-        
-
-        self.gen=self.conv
-
-                    
-
-    def forward(self, content,style,mask=None,return_intermediate=False): #, noise=None):
-        g_style,spaced_style,char_style = style
-        #spaced_style is embedded by parent model
-        if not self.skip_char_style:
-            content=torch.cat((content,spaced_style.to(content.device)),dim=2)
-        content = content.permute(1,2,0) #swap [T,b,cls] to [b,cls,T]
-        content = content.view(content.size(0),content.size(1),1,content.size(2)) #now [b,cls,H,W]
-
-        g_style = self.style_emb(g_style)
-        if self.conv1d is not None:
-            content,_ = self.conv1d((content,g_style))
-        x,_ = self.conv((content,g_style))
-        return self.out(x)
-
-class SpacedUnStyledGenerator(nn.Module):
-    def __init__(self, n_class, style_size, dim=256, output_dim=1, n_style_trans=6,no_content=False,use_noise=False,small=False,dist_map_content=False,use_second=True):
-        super(SpacedUnStyledGenerator, self).__init__()
-        fused=True
-        self.no_content=no_content
-        self.use_noise=use_noise
-        self.dist_map_content=dist_map_content
-        if small:
-            self.conv = nn.Sequential(
-                    UnstyledConvBlock(n_class+(1 if use_noise and not no_content else 0),dim,upsample=False,style_dim=style_size,initial=True,use_second=use_second),
-                    UnstyledConvBlock(dim,dim//2,upsample=True,only_vertical=True,fused=False,style_dim=style_size,use_noise=use_noise,use_second=use_second),
-                    UnstyledConvBlock(dim//2,dim//4,upsample=True,only_vertical=True,fused=False,style_dim=style_size,use_noise=use_noise,use_second=use_second),
-                    UnstyledConvBlock(dim//4,dim//8,upsample=True,only_vertical=False,fused=fused,style_dim=style_size,use_noise=use_noise,use_second=use_second),
-                    UnstyledConvBlock(dim//8,dim//16,upsample=False,style_dim=style_size,use_noise=use_noise,use_second=use_second),
-                    )
-        else:
-            self.conv = nn.Sequential(
-                    UnstyledConvBlock(n_class+(1 if use_noise and not no_content else 0),dim,upsample=False,style_dim=style_size,initial=True,use_second=use_second),
-                    UnstyledConvBlock(dim,dim//2,upsample=True,only_vertical=True,fused=False,style_dim=style_size,use_noise=use_noise,use_second=use_second),
-                    UnstyledConvBlock(dim//2,dim//4,upsample=True,only_vertical=True,fused=False,style_dim=style_size,use_noise=use_noise,use_second=use_second),
-                    UnstyledConvBlock(dim//4,dim//8,upsample=True,only_vertical=False,fused=fused,style_dim=style_size,use_noise=use_noise,use_second=use_second),
-                    UnstyledConvBlock(dim//8,dim//16,upsample=True,only_vertical=False,fused=fused,style_dim=style_size,use_noise=use_noise,use_second=use_second),
-                    )
-
-        self.out = nn.Sequential(EqualConv2d(dim//16, output_dim, 1), nn.Tanh())
-
-        layers = [PixelNorm()]
-        for i in range(n_style_trans):
-            layers.append(nn.Linear(style_size, style_size))
-            layers.append(nn.LeakyReLU(0.2))
-
-        self.style_emb = nn.Sequential(*layers)
-        self.gen=self.conv
-
-    def forward(self, content,style,mask=None,return_intermediate=False): #, noise=None):
-        if self.no_content:
-            content = content.zero_()
-            arange = torch.arange(content.size(0)).float()[:,None,None]
-            content[:,:,:] = arange/(content.size(0)//2)-1
-            if self.use_noise:
-                content[:,:,2:] = torch.randn_like(content[:,:,2:])
-        elif self.use_noise:
-            content = torch.cat((content,torch.randn_like(content[:,:,0:1])),dim=2)
-        content = content.permute(1,2,0) #swap [T,b,cls] to [b,cls,T]
-        content = content.view(content.size(0),content.size(1),1,content.size(2)) #now [b,cls,H,W]
-        if self.dist_map_content:
-            batch_size = content.size(0)
-            max_len=10
-            add=None
-            for b in range(batch_size):
-                #print('batch {}'.format(b))
-                start=0
-                curIdx=-1
-                for x in range(content.size(3)):
-                    idx = content[b,:,0,x].argmax()
-                    #print('x:{}, start:{}, curIdx:{}, idx:{}'.format(x,start,curIdx,idx))
-                    if idx!=0 and x-start>0:
-                        if curIdx==-1 and x-start>max_len:
-                            start = x-max_len
-                        step = (1-0.1)/((x-start+1)/2)
-                        #print('step {} = (1-0.1)/(({}-{}+1)/2)'.format(step,x,start))
-                        v=1-step
-                        for xd in range((x-start)//2 +((x-start)%2)):
-                            if idx!=-1:
-                                content[b,idx,0,x-(xd+1)]=v
-                                #print('content[{},{},{},{}]={}'.format(b,idx,0,x-(xd+1),v))
-                            if curIdx!=-1:
-                                content[b,curIdx,0,start+xd]=v
-                                #print('content[{},{},{},{}]={}'.format(b,curIdx,0,start+xd,v))
-                            v-=step
-
-                    if idx!=0:
-                        start=x+1
-                        curIdx=idx
-                x = content.size(3)
-                if x-start>max_len:
-                    start = x-max_len
-                step = (1-0.1)/((x-start+1)/2)
-                v=1-step
-                for xd in range((x-start)//2 +1):
-                    if curIdx!=-1:
-                        content[b,curIdx,0,start+xd]=v
-                        #print('pext[{},{},{},{}]={}'.format(b,curIdx,0,start+xd,v))
-                    v-=step
-        style = self.style_emb(style)
-        x,_ = self.conv((content,style))
-        out = self.out(x)
-        return out
 
 class AdaptiveInstanceNorm(nn.Module):
     def __init__(self, in_channel, style_dim):

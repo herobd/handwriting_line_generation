@@ -1,11 +1,12 @@
+#This is based on Curtis Wigington's CNN-RNN, replacing the RNN with more CNN
+
 import torch
 from torch import nn
-from .net_builder import getGroupSize
-from .grcl import NewGRCL
+from utils.util import getGroupSize
 
 class CNNOnlyHWR(nn.Module):
 
-    def __init__(self, nclass, nc=1, cnnOutSize=512, nh=512, leakyRelu=False, norm='group', useGRCL=False, small=False, pad=False):
+    def __init__(self, nclass, nc=1, cnnOutSize=512, nh=512, leakyRelu=False, norm='group',  small=False, pad=False):
         super(CNNOnlyHWR, self).__init__()
         if pad=='less':
             h = 32 if small else 64
@@ -56,28 +57,11 @@ class CNNOnlyHWR(nn.Module):
 
         self.cnn = cnn
         size1d=512
-        if useGRCL:
-            self.cnn1d = nn.Sequential(
-                            NewGRCL(512,512,3,T=1,inL=True),
-                            NewGRCL(512,512,3,T=1),
-                            nn.ReLU6(True),
-                            NewGRCL(512,256,5,T=1,inL=True),
-                            NewGRCL(256,256,5,T=1),
-                            nn.ReLU6(True),
-                            NewGRCL(256,128,7,T=1,inL=True),
-                            NewGRCL(128,128,7,T=1),
-                            nn.ReLU6(True),
-                            nn.Conv1d(128,nclass,1),
-                            nn.LogSoftmax(dim=1)
-                        )
-        elif norm=='group':
+        if norm=='group':
             self.cnn1d = nn.Sequential(
                         nn.Conv1d(size1d,size1d,3,1,2,2),
                         nn.GroupNorm(getGroupSize(size1d),size1d),
                         nn.ReLU(True),
-                        #nn.Conv1d(size1d,size1d,3,1,0,1),
-                        #nn.GroupNorm(getGroupSize(size1d),size1d),
-                        #nn.ReLU(True),
                         nn.Conv1d(size1d,size1d,3,1,4,4),
                         nn.GroupNorm(getGroupSize(size1d),size1d),
                         nn.ReLU(True),
@@ -87,12 +71,6 @@ class CNNOnlyHWR(nn.Module):
                         nn.Conv1d(size1d,size1d,3,1,8,8),
                         nn.GroupNorm(getGroupSize(size1d),size1d),
                         nn.ReLU(True),
-                        #nn.Conv1d(size1d,size1d,3,1,0,1),
-                        #nn.GroupNorm(getGroupSize(size1d),size1d),
-                        #nn.ReLU(True),
-                        #nn.Conv1d(size1d,size1d,3,1,16,16),
-                        #nn.GroupNorm(getGroupSize(size1d),size1d),
-                        #nn.ReLU(True),
                         nn.Conv1d(size1d,nclass,3,1,0,1),
                         nn.LogSoftmax(dim=1)
                         )
@@ -101,9 +79,6 @@ class CNNOnlyHWR(nn.Module):
                         nn.Conv1d(size1d,size1d,3,1,2,2),
                         nn.BatchNorm1d(size1d),
                         nn.ReLU(True),
-                        #nn.Conv1d(size1d,size1d,3,1,0,1),
-                        #nn.BatchNorm1d(size1d),
-                        #nn.ReLU(True),
                         nn.Conv1d(size1d,size1d,3,1,4,4),
                         nn.BatchNorm1d(size1d),
                         nn.ReLU(True),
@@ -113,12 +88,6 @@ class CNNOnlyHWR(nn.Module):
                         nn.Conv1d(size1d,size1d,3,1,8,8),
                         nn.BatchNorm1d(size1d),
                         nn.ReLU(True),
-                        #nn.Conv1d(size1d,size1d,3,1,0,1),
-                        #nn.BatchNorm1d(size1d),
-                        #nn.ReLU(True),
-                        #nn.Conv1d(size1d,size1d,3,1,16,16),
-                        #nn.BatchNorm1d(size1d),
-                        #nn.ReLU(True),
                         nn.Conv1d(size1d,nclass,3,1,0,1),
                         nn.LogSoftmax(dim=1)
                         )

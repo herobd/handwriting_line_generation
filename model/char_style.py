@@ -1,12 +1,61 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from .MUNIT_networks import Conv2dBlock
-from .net_builder import getGroupSize
+from utils.util import getGroupSize
 import copy, math
-from .attention import MultiHeadedAttention
 from collections import defaultdict
 import random
+
+class Conv2dBlock(nn.Module):
+    def __init__(self, input_dim ,output_dim, kernel_size, stride,
+                 padding=0, norm='none', activation='relu', pad_type='zero', transpose=False, reverse=False):
+        super(Conv2dBlock, self).__init__()
+        self.reverse=reverse
+        self.use_bias = True
+        # initialize padding
+        if transpose:
+            self.pad = lambda x: x
+        elif pad_type == 'reflect':
+            self.pad = nn.ReflectionPad2d(padding)
+        elif pad_type == 'replicate':
+            self.pad = nn.ReplicationPad2d(padding)
+        elif pad_type == 'zero':
+            self.pad = nn.ZeroPad2d(padding)
+        else:
+            assert 0, "Unsupported padding type: {}".format(pad_type)
+
+        # initialize normalization
+        norm_dim = output_dim
+        if norm == 'bn':
+            self.norm = nn.BatchNorm2d(norm_dim)
+        elif norm == 'in':
+            #self.norm = nn.InstanceNorm2d(norm_dim, track_running_stats=True)
+            self.norm = nn.InstanceNorm2d(norm_dim)
+        elif norm == 'ln':
+            self.norm = LayerNorm(norm_dim)
+        elif norm == 'adain':
+            self.norm = AdaptiveInstanceNorm2d(norm_dim)
+        elif norm == 'none' or norm == 'sn':
+            self.norm = None
+        elif norm == 'group':
+            self.norm = nn.GroupNorm(getGroupSize(norm_dim),norm_dim)
+        else:
+            assert 0, "Unsupported normalization: {}".format(norm)
+
+        # initialize activation
+        if activation == 'relu':
+            self.activation = nn.ReLU(inplace=True)
+        elif activation == 'lrelu':
+            self.activation = nn.LeakyReLU(0.2, inplace=True)
+        elif activation == 'prelu':
+            self.activation = nn.PReLU()
+        elif activation == 'selu':
+            self.activation = nn.SELU(inplace=True)
+        elif activation == 'tanh':
+            self.activation = nn.Tanh()
+        elif activation == 'logsoftmax':
+            self.activation = nn.LogSoftmax(dim=1)
+        elif activation == 'none':
 
 class CharExtractor(nn.Module):
     def __init__(self, input_dim, dim, style_dim,num_fc=1,small=False):

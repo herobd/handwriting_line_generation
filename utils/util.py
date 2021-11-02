@@ -387,3 +387,18 @@ def get_image_size(file_path):
             )
 
     return width, height
+
+def getGroupSize(channels):
+    if channels>=32:
+        goalSize=8
+    else:
+        goalSize=4
+    if channels%goalSize==0:
+        return goalSize
+    factors=primeFactors(channels)
+    bestDist=9999
+    for f in factors:
+        if abs(f-goalSize)<=bestDist: #favor larger
+            bestDist=abs(f-goalSize)
+            bestGroup=f
+    return int(bestGroup)

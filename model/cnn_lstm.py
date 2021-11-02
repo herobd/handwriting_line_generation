@@ -1,11 +1,10 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from .net_builder import getGroupSize
+from utils.util import getGroupSize
 
 from base import BaseModel
 
-from .pretrained_gen import Print
 
 class BidirectionalLSTM(nn.Module):
 

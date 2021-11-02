@@ -1,79 +1,12 @@
 import torch
 import torch.utils.data
 import numpy as np
-#from datasets.cancer import CancerDataset
-#from datasets.ai2d import AI2D
-#from datasets import forms_detect
-#from datasets.forms_detect import FormsDetect
-#from datasets import forms_box_detect
-#from datasets.forms_box_detect import FormsBoxDetect
-#from datasets import ai2d_box_detect
-#from datasets import forms_graph_pair
-#from datasets import forms_box_pair
-#from datasets.forms_box_pair import FormsBoxPair
-#from datasets.forms_feature_pair import FormsFeaturePair
-#from datasets import forms_feature_pair
-#from datasets.forms_pair import FormsPair
-#from datasets.forms_lf import FormsLF
-#from datasets import random_messages
-#from datasets import random_diffusion
 from datasets import hw_dataset
-from datasets import synth_hw_dataset
 from datasets import author_hw_dataset
-from datasets import author_rimes_dataset
 from datasets import author_rimeslines_dataset
-from datasets import mixed_author_hw_dataset
-from datasets import author_word_dataset
-from datasets import mixed_author_word_dataset
-from datasets import style_word_dataset
-#from datasets import same_font_dataset
-from datasets import spacing_dataset
-from datasets.style_author_dataset import StyleAuthorDataset
-#from torchvision import datasets, transforms
 from base import BaseDataLoader
 
 
-
-#class MnistDataLoader(BaseDataLoader):
-#    """
-#    MNIST data loading demo using BaseDataLoader
-#    """
-#    def __init__(self, config):
-#        super(MnistDataLoader, self).__init__(config)
-#        self.data_dir = config['data_loader']['data_dir']
-#        self.data_loader = torch.utils.data.DataLoader(
-#            datasets.MNIST('../data', train=True, download=True,
-#                           transform=transforms.Compose([
-#                               transforms.ToTensor(),
-#                               transforms.Normalize((0.1307,), (0.3081,))
-#                           ])), batch_size=256, shuffle=False)
-#        self.x = []
-#        self.y = []
-#        for data, target in self.data_loader:
-#            self.x += [i for i in data.numpy()]
-#            self.y += [i for i in target.numpy()]
-#        self.x = np.array(self.x)
-#        self.y = np.array(self.y)
-#
-#    def __next__(self):
-#        batch = super(MnistDataLoader, self).__next__()
-#        batch = [np.array(sample) for sample in batch]
-#        return batch
-#
-#    def _pack_data(self):
-#        packed = list(zip(self.x, self.y))
-#        return packed
-#
-#    def _unpack_data(self, packed):
-#        unpacked = list(zip(*packed))
-#        unpacked = [list(item) for item in unpacked]
-#        return unpacked
-#
-#    def _update_data(self, unpacked):
-#        self.x, self.y = unpacked
-#
-#    def _n_samples(self):
-#        return len(self.x)
 
 def getDataLoader(config,split):
         data_set_name = config['data_loader']['data_set_name']
@@ -98,77 +31,12 @@ def getDataLoader(config,split):
             numDataWorkers = 1
         shuffleValid = config['validation']['shuffle']
 
-        if data_set_name=='AI2D':
-            dataset=AI2D(dirPath=data_dir, split=split, config=config)
-            if split=='train':
-                validation=torch.utils.data.DataLoader(dataset.splitValidation(config), batch_size=batch_size, shuffle=shuffleValid, num_workers=numDataWorkers)
-            else:
-                validation=None
-            return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=numDataWorkers), validation
-        elif data_set_name=='FormsDetect':
-            return withCollate(FormsDetect,forms_detect.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='FormsBoxDetect':
-            return withCollate(FormsBoxDetect,forms_box_detect.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='AI2DBoxDetect':
-            return withCollate(ai2d_box_detect.AI2DBoxDetect,ai2d_box_detect.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='FormsBoxPair':
-            return withCollate(FormsBoxPair,forms_box_pair.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='FormsGraphPair':
-            return withCollate(forms_graph_pair.FormsGraphPair,forms_graph_pair.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='FormsFeaturePair':
-            return withCollate(FormsFeaturePair,forms_feature_pair.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='HWDataset':
+        if data_set_name=='HWDataset':
             return withCollate(hw_dataset.HWDataset,hw_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='MMDHWDataset':
-            return withCollate(mmd_hw_dataset.MMDHWDataset,mmd_hw_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='SynthHWDataset':
-            return withCollate(synth_hw_dataset.SynthHWDataset,synth_hw_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='SynthTextDataset':
-            return withCollate(synth_text_dataset.SynthTextDataset,synth_text_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         elif data_set_name=='AuthorHWDataset':
             return withCollate(author_hw_dataset.AuthorHWDataset,author_hw_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='AuthorRIMESDataset':
-            return withCollate(author_rimes_dataset.AuthorRIMESDataset,author_rimes_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         elif data_set_name=='AuthorRIMESLinesDataset':
             return withCollate(author_rimeslines_dataset.AuthorRIMESLinesDataset,author_rimeslines_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='AuthorNAFlinesDataset':
-            return withCollate(author_NAFlines_dataset.AuthorNAFlinesDataset,author_NAFlines_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='MixedAuthorHWDataset':
-            return withCollate(mixed_author_hw_dataset.MixedAuthorHWDataset,mixed_author_hw_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='AuthorWordDataset':
-            return withCollate(author_word_dataset.AuthorWordDataset,author_word_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='MixedAuthorWordDataset':
-            return withCollate(mixed_author_word_dataset.MixedAuthorWordDataset,mixed_author_word_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='StyleWordDataset':
-            return withCollate(style_word_dataset.StyleWordDataset,style_word_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='FontDataset':
-            return withCollate(font_dataset.FontDataset,font_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='SameFontDataset':
-            return withCollate(same_font_dataset.SameFontDataset,same_font_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='SpacingDataset':
-            return withCollate(spacing_dataset.SpacingDataset,spacing_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='FormsPair':
-            return basic(FormsPair,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='FormsLF':
-            return basic(FormsLF,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='StyleAuthorDataset':
-            return basic(StyleAuthorDataset,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='Cancer':
-            if split=='train':
-                rot=config['rot'] if 'rot' in config else None
-                trainData = CancerDataset(data_dir, train=True, rot=rot)
-                trainLoader = torch.utils.data.DataLoader(trainData, batch_size=batch_size, shuffle=shuffle, num_workers=numDataWorkers)
-                validData = CancerDataset(data_dir, train=False)
-                validLoader = torch.utils.data.DataLoader(validData, batch_size=batch_size, shuffle=shuffleValid, num_workers=numDataWorkers)
-                return trainLoader, validLoader
-        elif data_set_name=='RandomMessagesDataset':
-            data = random_messages.RandomMessagesDataset(config)
-            dataLoader = torch.utils.data.DataLoader(data,batch_size=batch_size, shuffle=shuffle, num_workers=numDataWorkers,collate_fn=random_messages.collate)
-            return dataLoader,dataLoader
-        elif data_set_name=='RandomDiffusionDataset':
-            data = random_diffusion.RandomDiffusionDataset(config)
-            dataLoader = torch.utils.data.DataLoader(data,batch_size=batch_size, shuffle=shuffle, num_workers=numDataWorkers,collate_fn=random_diffusion.collate)
-            return dataLoader,dataLoader
         else:
             print('Error, no dataloader has no set for {}'.format(data_set_name))
             exit()
