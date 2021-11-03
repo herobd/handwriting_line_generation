@@ -93,12 +93,7 @@ I don't remember where I got the english text corpus (at least part of it is the
   ├── datasets/ - default datasets folder
   │   ├── hw_dataset.py - basic dataset made to handle IAM data at the line level
   │   ├── author_hw_dataset.py - This sorts instances by author and has a 'a_batch_size', which is how many by each author should be in the batch (batch_size is number of authors)
-  │   ├── author_word_dataset.py - Same as above only at word level instead of line level
-  │   ├── (the "mixed_author" datasets have different splits which mix authors over the splits)
-  │   ├── author_rimes_dataset.py - Same as author_hw_dataset.py, but for RIMES words
   │   ├── author_rimeslines_dataset.py - Same as author_hw_dataset.py, but for RIMES lines
-  │   ├── synth_hw_dataset.py - For training a HWR model using the generated images
-  │   ├── create_synth_text_dataset.py - Generate images for synth_hw_dataset.py (although it can generate them on the fly)
   │   └── test*.py - This are scripts to run through a dataset and simply display what's being returned. For debugging purposes.
   │
   ├── logger/ - for training process logging
@@ -106,39 +101,14 @@ I don't remember where I got the english text corpus (at least part of it is the
   │
   ├── model/ - models, losses, and metrics
   │   ├── loss.py - has all losses, here or imported here
-  │   ├── MUNIT_networks.py - has code from MUNIT paper as well as my own generator classes
-  │   ├── aligned_l1_loss.py - l1 loss after aligning input and target  by sliding them along eachother
-  │   ├── attention.py - functions for multi-head dot product attention
-  │   ├── author_classifier.py - auxiliary patch-based model to classify author id
-  │   ├── char_cond_discriminator_ap.py - discriminator with seperate classifying heads for each character, accepts character specific style vectors
-  │   ├── char_gen.py - generator model which accepts character specific style vectors
   │   ├── cnn_lstm.py - Code from Start, Follow, Read, with minor tweaks to allow Group Norm and logsoftmax at the end
-  │   ├── cnn_lstm_skip.py - above model, but has skip conenction past LSTM layers
   │   ├── cnn_only_hwr.py - Alternate network to do HWR without recourrent layers. Doesn't work too well.
-  │   ├── google_hwr.py - Non-RNN based HWR based on "A Scalable Handwritten Text Recognition System"
-  │   ├── deform_hwr.py - Code to allow ElasticDeform and DeformableConvs in HWR network without style (for baseline)
-  │   ├── discriminator.py - Has various discriminators I tried, all using spectral norm
-  │   ├── cond_discriminator_ap.py - Discriminator used in paper. Has many options to make it conditioned on style, text
-  │   ├── cond_discriminator.py - Older version, less options, doesn't use average pooling
-  │   ├── dtw_loss.py - l1 loss after aligning input and target using dynamic programming. Didn't have success with this.
-  │   ├── elastic_layer.py - Chris's code along with my modification to allow style appending
-  │   ├── grcl.py - Gated Recurrent Convolution Layer
-  │   │
+  │   ├── discriminator_ap.py - Multi-scale patch discriminator using spectral norm
   │   ├── hw_with_style.py - Primary model which contains all submodels.
-  │   │
-  │   ├── join_net.py - Part of Curtis's code for training an aligning network. Never got this working
-  │   ├── key_loss.py - Defines the loss to cause keys to be alteast some distance from their closest neighbor
-  │   ├── lookup_style.py - intended to create a learned style vector for each author, rather than extracting them from example images
-  │   ├── mask_rnn.py - Both spacing and mask generation networks, RNN and CNN based
-  │   ├── net_builder.py - various auxilary network construction functions from previous project. I think I only use "getGroupSize()" to use with Group Norm
-  │   ├── pretrained_gen.py - generator model I experminetned with where it was pretrained as the decoder of an autoencoder
-  │   ├── pure_gen.py - contains model from paper (PureGen) as well as several variations I experimented with
-  │   ├── simple_gan.py - None-StyleGAN based generator, and a simpler discriminator
-  │   ├── pyramid_l1_loss.py - exactly what it says
-  │   ├── style.py - old style extractor network
-  │   ├── char_style.py - style extractor from paper, that uses character specific heads
-  │   ├── vae_style.py - style extractor which predicts two parts for using with VAE
-  │   └── style_hwr.py - Various models of HWR that use a style vector.
+  │   ├── count_cnn.py - Spacing prediction subnetwork
+  │   ├── pure_gen.py - StyleGAN based generator
+  │   ├── char_style.py - style extractor which uses character specific heads
+  │   └── autoencoder.py - Contains autoencoding models pre-trained for perceptual loss
   │
   ├── saved/ - default checkpoints folder
   │
@@ -146,17 +116,15 @@ I don't remember where I got the english text corpus (at least part of it is the
   ├── old_configs/ - all the other config files I've used during development/other projects
   │
   ├── trainer/ - trainers
-  │   ├── hw_with_style_trainer.py - This has the code to run training (there are two methods for training, depending on whether a curriculum is specified)
-  │   └── trainer.py
+  │   ├── hw_with_style_trainer.py - This has the code to run training for both HWR model and generative model (specify curriculum for generator training)
+  │   └── auto_trainer.py - For training autoencoder used in perceptual loss
   │
   └── utils/
       ├── util.py - importantly has code to create mask from handwriting image and extact centerline from handwriting image
       ├── augmentation.py - Chris's brightness augmentation
       ├── curriculum.py - this object handles tracking the curriculum during training
-      ├── character_set.py - Gets the character set from label files (modfied from Start,Follow,Read code)
       ├── error_rates.py - character error, etc
       ├── grid_distortion.py - Curtis's augmentation
-      ├── metainit.py - I tried getting this paper to work: "MetaInit: Initialzing learning by learning to initialize"
       ├── normalize_line.py - functions to noramlize a line image
       ├── parseIAM.py - parses the xmls IAM has
       ├── parseRIMESlines.py - parse the GT for RIMES into line images
