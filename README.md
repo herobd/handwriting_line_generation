@@ -1,6 +1,6 @@
 # Handwriting line generation
 
-UPDATE 3 Nov 2021: I've done a major cleaning of the code. I had initially left in the code to run all the variations of the method (genetators, discriminators, losses, HWR models, etc) which made the code very hard to read. You can still find these in the full-messy branch. But I've cut out almost all of than and only left the parts relevant to the method used for the paper in the master branch.
+UPDATE 3 Nov 2021: I've done a major cleaning of the code. I had initially left in the code to run all the variations of the method I had tried (genetators, discriminators, losses, HWR models, etc) which made the code very hard to read. You can still find these in the `full-messy` branch. But I've cut out almost everything except the parts relevant to the method used for the paper in the master branch.
 
 ![examples of generated handwriting](https://i.ibb.co/ChtGqwW/handwriting-for-readme.png)
 
