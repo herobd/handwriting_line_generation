@@ -56,6 +56,30 @@ class Conv2dBlock(nn.Module):
         elif activation == 'logsoftmax':
             self.activation = nn.LogSoftmax(dim=1)
         elif activation == 'none':
+            self.activation = None
+        else:
+            assert 0, "Unsupported activation: {}".format(activation)
+
+        # initialize convolution
+        if transpose:
+            self.conv = nn.ConvTranspose2d(input_dim, output_dim, kernel_size, stride, bias=self.use_bias, padding=padding)
+            if norm == 'sn':
+                raise NotImplemented('easy to do')
+        elif norm == 'sn':
+            self.conv = SpectralNorm(nn.Conv2d(input_dim, output_dim, kernel_size, stride, bias=self.use_bias))
+        else:
+            self.conv = nn.Conv2d(input_dim, output_dim, kernel_size, stride, bias=self.use_bias)
+
+    def forward(self, x):
+        if not self.reverse:
+            x = self.conv(self.pad(x))
+        if self.norm:
+            x = self.norm(x)
+        if self.activation:
+            x = self.activation(x)
+        if self.reverse:
+            x = self.conv(self.pad(x))
+        return x
 
 class CharExtractor(nn.Module):
     def __init__(self, input_dim, dim, style_dim,num_fc=1,small=False):

@@ -1,4 +1,5 @@
 import torch.nn as nn
+from torch.nn import Parameter
 import torch
 import torch.nn.functional as F
 from utils.util import getGroupSize
@@ -51,6 +52,17 @@ class SpectralNorm(nn.Module):
         u.data = l2normalize(u.data)
         v.data = l2normalize(v.data)
         w_bar = Parameter(w.data)
+
+        del self.module._parameters[self.name]
+
+        self.module.register_parameter(self.name + "_u", u)
+        self.module.register_parameter(self.name + "_v", v)
+        self.module.register_parameter(self.name + "_bar", w_bar)
+
+
+    def forward(self, *args):
+        self._update_u_v()
+        return self.module.forward(*args)
 
 
 class DiscriminatorAP(nn.Module):

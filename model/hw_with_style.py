@@ -113,7 +113,7 @@ class HWWithStyle(BaseModel):
             #    self.style_extractor = None
             #else:
             small = False
-            global_pool = config['global_pool'] if 'global_pool' in config else False
+            global_pool = config['style_global_pool'] if 'style_global_pool' in config else False
             dim = config['style_extractor_dim'] if 'style_extractor_dim' in config else dim
             char_dim = config['char_style_extractor_dim'] if 'char_style_extractor_dim' in config else dim*2
             average_found_char_style = config['average_found_char_style']

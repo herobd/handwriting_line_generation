@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from modelutils.util import getGroupSize
+from utils.util import getGroupSize
 from model.pure_gen import PixelNorm
 
 

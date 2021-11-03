@@ -1,6 +1,8 @@
 # Handwriting line generation
 
-Handwriting... with style!
+UPDATE 3 Nov 2021: I've done a major cleaning of the code. I had initially left in the code to run all the variations of the method (genetators, discriminators, losses, HWR models, etc) which made the code very hard to read. You can still find these in the full-messy branch. But I've cut out almost all of than and only left the parts relevant to the method used for the paper in the master branch.
+
+![examples of generated handwriting](https://i.ibb.co/ChtGqwW/handwriting-for-readme.png)
 
 This is the code for the paper "Text and Style Conditioned GAN for the Generation of Offline-Handwriting Lines" published at BMVC 2020. https://arxiv.org/abs/2009.00678
 
@@ -51,7 +53,11 @@ You can also use `-h`
 
 It has several "modes" to select from once it's loaded the model. Use `h` to display them. Most will ask for additional input (desired text, number of styles, etc). The output is saved to the supplied `-d` location.
 
-Some modes need the datasets styles in a pickle. I've included the IAM/RIME test sets with the trained snapshots. Use `get_styles.py` to extract any additional ones. Some modes just want example images.
+Probably the two most useful modes are: 
+* "from-to", which will ask for two image paths and an output text. It extracts the styles from the given images and then generates a series of images interpolating between the two styles with the given text.
+* "Random", will generate images using random styles (interpolated from dataset style pickle). It asks how many samples you want and what text.
+
+Some modes need the full dataset's styles in a pickle. I've included the IAM/RIME test set style pickles with the trained snapshots. Use `get_styles.py` to extract any additional ones.
 
 `python get_styles.py -c path/to/snapshot.pth -d output_directory -g #[optional gpu flag] -T[optional, do test set, otherwise does trian and valid]`
 

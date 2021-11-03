@@ -154,7 +154,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
     else:
         model = eval(config['arch'])(config['model'])
     model.eval()
-    model.summary()
+    #model.summary()
     if gpu is not None:
         model = model.to(gpu)
     model.count_std=0
@@ -742,7 +742,7 @@ def generate(model,style,text,char_to_idx,gpu):
     label_len = torch.IntTensor(batch_size).fill_(label.size(0))
     results=[]
     styles=[]
-    return model(label,label_len,style,flat=True)
+    return model(label,label_len,style)
 
 # generates a series of images interpolating between the styles
 def interpolate(model,style1,style2,text,char_to_idx,gpu,step=0.05):
@@ -760,7 +760,7 @@ def interpolate(model,style1,style2,text,char_to_idx,gpu,step=0.05):
             style = (style2[0]*alpha+(1-alpha)*style1[0],style2[1]*alpha+(1-alpha)*style1[1],style2[2]*alpha+(1-alpha)*style1[2])
         else:
             style = style2*alpha+(1-alpha)*style1
-        gen = model(label,label_len,style,flat=True)
+        gen = model(label,label_len,style)
         results.append(gen)
         if type(style) is tuple:
             styles.append((style[0].cpu().detach(),style[1].cpu().detach(),style[2].cpu().detach()))
