@@ -4,7 +4,11 @@ UPDATE 3 Nov 2021: I've done a major cleaning of the code. I had initially left 
 
 ![examples of generated handwriting](https://i.ibb.co/ChtGqwW/handwriting-for-readme.png)
 
-This is the code for the paper "Text and Style Conditioned GAN for the Generation of Offline-Handwriting Lines" published at BMVC 2020. https://arxiv.org/abs/2009.00678
+This is the code for the paper "Text and Style Conditioned GAN for the Generation of Offline-Handwriting Lines" published at BMVC 2020. 
+
+Paper: https://arxiv.org/abs/2009.00678
+
+Video: https://youtu.be/TuYlE8qu_VE
 
 This was originally Brian Davis's summer 2019 internship project at Adobe (https://github.com/adobe-research/hw_with_style). It was then extended afterwards (while at BYU) and finally published.
 
