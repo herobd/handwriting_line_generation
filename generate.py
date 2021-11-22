@@ -25,6 +25,10 @@ import random, re, csv
 
 logging.basicConfig(level=logging.INFO, format='')
 
+data_loader= None
+valid_data_loader = None
+authors = None
+
 def permuteF(sent):
     s = sent.split(' ')
     if len(s)>4:
@@ -99,6 +103,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
     else:
         checkpoint = None
         config = json.load(open(config))
+    config['model']['RUN']=True
     config['optimizer_type']="none"
     config['trainer']['use_learning_schedule']=False
     config['trainer']['swa']=False
@@ -135,14 +140,48 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
     if fromDataset:
         config['data_loader']['batch_size']=1
         config['validation']['batch_size']=1
-        if not test:
-            data_loader, valid_data_loader = getDataLoader(config,'train')
-        else:
-            config['data_loader']['a_batch_size']=1
-            config['validation']['a_batch_size']=1
-            print('changed a_batch_size to 1')
-            test_data_loader, _ = getDataLoader(config,'test')
-            valid_data_loader = test_data_loader
+        def get_valid_data_loader():
+            global data_loader
+            global valid_data_loader
+            if valid_data_loader is None:
+                if not test:
+                    data_loader, valid_data_loader = getDataLoader(config,'train')
+                else:
+                    config['data_loader']['a_batch_size']=1
+                    config['validation']['a_batch_size']=1
+                    print('changed a_batch_size to 1')
+                    test_data_loader, _ = getDataLoader(config,'test')
+                    valid_data_loader = test_data_loader
+
+            return valid_data_loader
+        def get_data_loader():
+            global data_loader
+            global valid_data_loader
+            if valid_data_loader is None:
+                if not test:
+                    data_loader, valid_data_loader = getDataLoader(config,'train')
+                else:
+                    config['data_loader']['a_batch_size']=1
+                    config['validation']['a_batch_size']=1
+                    print('changed a_batch_size to 1')
+                    test_data_loader, _ = getDataLoader(config,'test')
+                    valid_data_loader = test_data_loader
+
+            return data_loader
+        def get_test_data_loader():
+            global data_loader
+            global valid_data_loader
+            if valid_data_loader is None:
+                if not test:
+                    data_loader, valid_data_loader = getDataLoader(config,'train')
+                else:
+                    config['data_loader']['a_batch_size']=1
+                    config['validation']['a_batch_size']=1
+                    print('changed a_batch_size to 1')
+                    test_data_loader, _ = getDataLoader(config,'test')
+                    valid_data_loader = test_data_loader
+
+            return valid_test_loader
     
 
     if checkpoint is not None:
@@ -163,6 +202,8 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
     gt_mask = 'create_mask' not in config['model'] #'mask' in config['model']['generator'] or 'Mask' in config['model']['generator']
 
     char_set_path = config['data_loader']['char_file']
+    if char_set_path=='../data/RIMES/characterset_lines.json':
+        char_set_path='data/RIMES_characterset_lines.json'
     with open(char_set_path) as f:
         char_set = json.load(f)
     char_to_idx = char_set['char_to_idx']
@@ -197,10 +238,16 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 authors.add(author)
         authors=list(authors)
     elif not test:
-        authors = valid_data_loader.dataset.authors
+        authors = None
         styles = None
     else:
         styles = None
+
+    def get_authors():
+        global authors
+        if authors is None:
+            authors = get_valid_data_loader().dataset.authors
+        return authors
 
     num_char = config['model']['num_class']
     use_hwr_pred_for_style = config['trainer']['use_hwr_pred_for_style'] if 'use_hwr_pred_for_style' in config['trainer'] else False
@@ -227,14 +274,14 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 print('[R] Random: generate n images using random (interpolated) styles. Can use fixed or random text')
                 print("[f] Given two image paths, interpolate from one style to the other using the given text.")
             elif action =='a' or action=='authors':
-                print(authors)
+                print(get_authors())
             elif action =='s' or action=='strech':
                 index1=input("batch? ")
                 if len(index1)>0:
                     index1=int(index1)
                 else:
                     index1=0
-                for i,instance1 in enumerate(valid_data_loader):
+                for i,instance1 in enumerate(get_valid_data_loader()):
                     if i==index1:
                         break
                 author1 = instance1['author'][0]
@@ -266,7 +313,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 if action[0]=='r':
                     index = random.randint(0,20)
                     last_author = None
-                    for i,instance in enumerate(valid_data_loader):
+                    for i,instance in enumerate(get_valid_data_loader()):
                         author = instance['author'][0]
                         if i>=index and author!=last_author:
                             print('i: {}, a: {}'.format(i,author))
@@ -329,10 +376,10 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 text_falseL=[]
                 for i in range(num_inst):
                     if not model.vae:
-                        authorA = random.choice(authors)
+                        authorA = random.choice(get_authors())
                         instance = random.randint(0,len(styles[authorA])-1)
                         style1 = styles[authorA][instance]
-                        authorB = random.choice(authors)
+                        authorB = random.choice(get_authors())
                         instance = random.randint(0,len(styles[authorB])-1)
                         style2 = styles[authorB][instance]
 
@@ -450,7 +497,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 else:
                     max_hits=5
                 styles=[]
-                for i,instance1 in enumerate(data_loader):
+                for i,instance1 in enumerate(get_valid_data_loader):
                     if instance1['author'][0]==author:
                         print('{} found on instance {}'.format(author,i))
                         label1 = instance1['label'].to(gpu)
@@ -494,11 +541,11 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 #first build a list of styles
                 for i in range(num_inst):
                     if not model.vae:
-                        authorA = random.choice(authors)
+                        authorA = random.choice(get_authors())
                         instance = random.randint(0,len(styles[authorA])-1)
                         style1 = styles[authorA][instance]
                         if interpolateS:
-                            authorB = random.choice(authors)
+                            authorB = random.choice(get_authors())
                             instance = random.randint(0,len(styles[authorB])-1)
                             style2 = styles[authorB][instance]
 
@@ -525,7 +572,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
 
                     #save the real images, from test set
                     for i in range(num_inst):
-                        index = random.randint(0,len(test_data_loader)-1)
+                        index = random.randint(0,len(get_test_data_loader())-1)
                         instance = test_data_loader.dataset[index]
                         text = instance['gt'][0]
                         textL.append(text)
@@ -641,7 +688,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 text='deep'
                 with open(os.path.join(saveDir,'ordered.txt'),'w') as f:
                     f.write('{}\n'.format(per_author))
-                    for author in authors:
+                    for author in get_authors():
                         for i in range(per_author):
                             style = styles[author][i]
                             if charSpec:
@@ -670,10 +717,10 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     else:
                         index1=0
                     if index1>=0:
-                        data = valid_data_loader
+                        data = get_valid_data_loader()
                     else:
                         index1*=-1
-                        data = data_loader
+                        data = get_data_loader()
                     for i,instance1 in enumerate(data):
                         if i==index1:
                             break
@@ -682,7 +729,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 else:
                     author1=input("author? ")
                     if len(author1)==0:
-                        author1=authors[0]
+                        author1=get_authors()[0]
                 if True: #new way
                     mask=None
                     index=input("batch? ")
@@ -694,10 +741,10 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     else:
                         index=0
                     if index>=0:
-                        data = valid_data_loader
+                        data = get_valid_data_loader()
                     else:
                         index*=-1
-                        data = data_loader
+                        data = get_data_loader()
                     for i,instance2 in enumerate(data):
                         if i==index:
                             break

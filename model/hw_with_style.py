@@ -13,6 +13,7 @@ from model.discriminator_ap import DiscriminatorAP
 from model.char_style import CharStyleEncoder
 from model.count_cnn import CountCNN
 from skimage import draw
+import os
 
 def correct_pred(pred,label):
     #Get optimal alignment
@@ -163,14 +164,18 @@ class HWWithStyle(BaseModel):
             raise NotImplementedError('unknown HWR model: '+hwr_type)
         self.hwr_frozen=False
         if 'pretrained_hwr' in config and config['pretrained_hwr'] is not None:
-            snapshot = torch.load(config['pretrained_hwr'], map_location='cpu')
-            hwr_state_dict={}
-            for key,value in  snapshot['state_dict'].items():
-                if key[:4]=='hwr.':
-                    hwr_state_dict[key[4:]] = value
-            if len(hwr_state_dict)==0:
-                hwr_state_dict=snapshot['state_dict']
-            self.hwr.load_state_dict( hwr_state_dict )
+            if os.path.exists(config['pretrained_hwr']):
+                snapshot = torch.load(config['pretrained_hwr'], map_location='cpu')
+                hwr_state_dict={}
+                for key,value in  snapshot['state_dict'].items():
+                    if key[:4]=='hwr.':
+                        hwr_state_dict[key[4:]] = value
+                if len(hwr_state_dict)==0:
+                    hwr_state_dict=snapshot['state_dict']
+                self.hwr.load_state_dict( hwr_state_dict )
+            elif not config.get('RUN'):
+                print('Could not open pretrained HWR weights at '+config['pretrained_hwr'])
+                exit(1)
 
         if 'generator' in config and config['generator'] == 'none':
             self.generator = None
