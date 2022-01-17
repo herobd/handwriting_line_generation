@@ -7,10 +7,10 @@ from model import *
 from model.metric import *
 from model.loss import *
 from logger import Logger
-from trainer import *
-from data_loader import getDataLoader
-from datasets.text_data import TextData
-from evaluators import *
+#from trainer import *
+#from data_loader import getDataLoader
+#from datasets.text_data import TextData
+#from evaluators import *
 import math
 from collections import defaultdict
 import pickle
@@ -355,7 +355,8 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
             elif action[0]=='R': #Just random (interpolated) styles, with option for random text
                 assert(styles is not None and 'perhaps you forgot to set "-s path/to/styles.pkl"?')
                 num_inst = int(input('num to gen? '))
-                text = input('text? (enter "RANDOM" or file path (.txt) for sampled text"): ') 
+                text = input('text? (enter "RANDOM" or "WIKI" or file path (.txt) for sampled text"): ') 
+                index_offset=0
                 if len(text)==0:
                     text='The quick brown fox jumps over the lazy dog.'
                     textList = None
@@ -363,6 +364,10 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     text=None
                     textData = TextData(batch_size=num_inst,max_len=55)
                     textList = textData.getInstance()['gt']
+                elif text=='WIKI':
+                    from wiki_text import Wikipedia
+                    textList = Wikipedia()
+                    index_offset = int(input('index start:'))
                 elif text.endswith('.txt'):
                     textData = TextData(batch_size=num_inst,max_len=55,textfile=text)
                     textList = textData.getInstance()['gt']
@@ -374,12 +379,15 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 stylesL=[]
                 textL=[]
                 text_falseL=[]
+                ensure_dir(os.path.join(saveDir))#,'fake'))
                 for i in range(num_inst):
                     if not model.vae:
-                        authorA = random.choice(get_authors())
+                        #authorA = random.choice(get_authors())
+                        authorA = random.choice(list(styles.keys()))
                         instance = random.randint(0,len(styles[authorA])-1)
                         style1 = styles[authorA][instance]
-                        authorB = random.choice(get_authors())
+                        #authorB = random.choice(get_authors())
+                        authorB = random.choice(list(styles.keys()))
                         instance = random.randint(0,len(styles[authorB])-1)
                         style2 = styles[authorB][instance]
 
@@ -394,11 +402,10 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                         else:
                             style = style1*inter + style2*(1-inter)
 
-                        stylesL.append(style)
+                        #stylesL.append(style)
                     else: #VAE
                         stylesL=[torch.FloatTensor(1,model.style_dim).normal_() for i in range(num_styles)]
-                ensure_dir(os.path.join(saveDir))#,'fake'))
-                for i,style in enumerate(stylesL):
+                    #for i,style in enumerate(stylesL):
                     if charSpec:
                         if gpu is not None:
                             style = (torch.from_numpy(style[0])[None,...].to(gpu),torch.from_numpy(style[1][None,...]).to(gpu),torch.from_numpy(style[2][None,...]).to(gpu))
@@ -415,9 +422,12 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                         text = textList[i]
                     im = generate(model,style,text,char_to_idx,gpu)
                     im = ((1-im[0].permute(1,2,0))*127.5).cpu().numpy().astype(np.uint8)
-                    image_name = 'sample_{}.png'.format(i)
+                    image_name = 'sample_{}.png'.format(i+index_offset)
                     path = os.path.join(saveDir,image_name)
                     cv2.imwrite(path,im)
+                    if textList is not None:
+                        with open('OUT.txt','a') as out:
+                            out.write(text+'\n')
 
 
             elif action[0]=='m': #style vector math, this is broken
