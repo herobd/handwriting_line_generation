@@ -368,6 +368,8 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     from wiki_text import Wikipedia
                     textList = Wikipedia()
                     index_offset = int(input('index start:'))
+                    for i in range(index_offset):
+                        text = textList[i]
                 elif text.endswith('.txt'):
                     textData = TextData(batch_size=num_inst,max_len=55,textfile=text)
                     textList = textData.getInstance()['gt']
@@ -427,7 +429,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     cv2.imwrite(path,im)
                     if textList is not None:
                         with open('OUT.txt','a') as out:
-                            out.write(text+'\n')
+                            out.write('{}:'.format(i+index_offset)+text+'\n')
 
 
             elif action[0]=='m': #style vector math, this is broken
