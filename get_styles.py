@@ -309,16 +309,8 @@ if __name__ == '__main__':
         index = args.imgname
 
 
-    try:
-        if args.gpu is not None:
-            with torch.cuda.device(args.gpu):
-                main(args.checkpoint, args.savedir, index, gpu=args.gpu, shuffle=args.shuffle, setBatch=args.batchsize, config=args.config, addToConfig=addtoconfig,test=args.test,verbosity=args.verbosity,transform_style=args.transformstyle)
-        else:
+    if args.gpu is not None:
+        with torch.cuda.device(args.gpu):
             main(args.checkpoint, args.savedir, index, gpu=args.gpu, shuffle=args.shuffle, setBatch=args.batchsize, config=args.config, addToConfig=addtoconfig,test=args.test,verbosity=args.verbosity,transform_style=args.transformstyle)
-    except Exception as er:
-        if len(args.notify)>0:
-            update_status(name,er)
-        raise er
     else:
-        if len(args.notify)>0:
-            update_status(name,'DONE!')
+        main(args.checkpoint, args.savedir, index, gpu=args.gpu, shuffle=args.shuffle, setBatch=args.batchsize, config=args.config, addToConfig=addtoconfig,test=args.test,verbosity=args.verbosity,transform_style=args.transformstyle)
