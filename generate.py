@@ -426,7 +426,11 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                     im = ((1-im[0].permute(1,2,0))*127.5).cpu().numpy().astype(np.uint8)
                     image_name = 'sample_{}.png'.format(i+index_offset)
                     path = os.path.join(saveDir,image_name)
-                    cv2.imwrite(path,im)
+                    wrote = cv2.imwrite(path,im)
+                    if not wrote:
+                        print('Failed write for {}'.format(i+index_offset))
+                        break
+                    assert os.path.exists(path)
                     if textList is not None:
                         with open('OUT.txt','a') as out:
                             out.write('{}:'.format(i+index_offset)+text+'\n')
