@@ -9,7 +9,7 @@ from model.loss import *
 from logger import Logger
 #from trainer import *
 #from data_loader import getDataLoader
-#from datasets.text_data import TextData
+from datasets.text_data import TextData
 #from evaluators import *
 import math
 from collections import defaultdict
