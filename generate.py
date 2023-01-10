@@ -649,7 +649,7 @@ def main(resume,saveDir,gpu=None,config=None,addToConfig=None, fromDataset=True,
                 else:
                     path1 = arguments['path1']
                     path2 = arguments['path2']
-                    text_gen = arguments['text_gen'] if 'text_gen' in arguements else arguments['text']
+                    text_gen = arguments['text_gen'] if 'text_gen' in arguments else arguments['text']
                 img_height=64
 
                 image1 = cv2.imread(path1,0)
