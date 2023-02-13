@@ -461,7 +461,7 @@ class HWWithStyleTrainer(BaseTrainer):
                     losses = self.run_gen(instance,self.curriculum.getValid())
                     pred=None
                 else:
-                    pred, recon, losses = self.run(instance)
+                    pred, recon, losses = self.run_hwr(instance)
             
                 for name in losses.keys():
                     losses[name] *= self.lossWeights[name[:-4]]
